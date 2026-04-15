@@ -1611,6 +1611,10 @@ function stepTraits(data) {
       Distribua seus atributos. Cada um começa em 8. Você tem <strong>+18 pontos</strong> para distribuir (máximo 20, mínimo 1).
       ★ = primário da sua classe.
     </p>
+    <div class="flex gap-8 flex-wrap mb-12">
+      <button class="btn btn-hope btn-sm" onclick="applySuggestedTraits()">✦ Sugerido para ${data.classId ? DH.CLASSES.find(c=>c.id===data.classId)?.name : 'classe'}</button>
+      <button class="btn btn-sm" onclick="resetTraits()">↺ Resetar (8 em todos)</button>
+    </div>
     <div class="traits-grid">${rows}</div>
     <div style="margin-top:12px;text-align:right;font-size:0.8rem;color:var(--text-dim)">
       Total: <span id="traits-total" style="color:var(--gold)">${total}</span> / ${budget}
@@ -1622,6 +1626,37 @@ function stepTraits(data) {
   `;
 }
 
+
+function applySuggestedTraits() {
+  const classId = STATE.creation.data.classId;
+  const cls = DH.CLASSES.find(c => c.id === classId);
+  if (!cls) { notify('Selecione uma classe primeiro', 'err'); return; }
+
+  // Suggested: primary=16, secondary=14, others distributed 10-12
+  const suggested = { Agility:10, Strength:10, Finesse:10, Instinct:10, Knowledge:10, Presence:10 };
+  suggested[cls.traits.primary] = 16;
+  suggested[cls.traits.secondary] = 14;
+
+  // Give remaining 2 points to a tertiary based on class flavor
+  const tertiaryMap = {
+    bard:     'Knowledge',  druid:    'Strength',  guardian: 'Instinct',
+    ranger:   'Finesse',    rogue:    'Knowledge',  seraph:   'Strength',
+    sorcerer: 'Finesse',    warrior:  'Agility',   wizard:   'Presence',
+  };
+  const tertiary = tertiaryMap[classId];
+  if (tertiary && tertiary !== cls.traits.primary && tertiary !== cls.traits.secondary) {
+    suggested[tertiary] = 12;
+  }
+
+  STATE.creation.data.traits = suggested;
+  notify('✦ Distribuição sugerida aplicada para ' + cls.name, 'ok');
+  renderCreation();
+}
+
+function resetTraits() {
+  STATE.creation.data.traits = { Agility:8, Strength:8, Finesse:8, Instinct:8, Knowledge:8, Presence:8 };
+  renderCreation();
+}
 function adjustTrait(trait, delta) {
   const vals = STATE.creation.data.traits || { Agility:8, Strength:8, Finesse:8, Instinct:8, Knowledge:8, Presence:8 };
   const cur = vals[trait] || 8;
@@ -1776,9 +1811,9 @@ function stepFinalize(data) {
     return `<p class="text-fear">Complete os passos anteriores para finalizar.</p>`;
   }
   const traits = data.traits || {};
-  const hp = cls.hp + (DH.getMod(traits.Strength||8)) + 6;
-  const stress = cls.stress + (DH.getMod(traits.Presence||8));
-  const evasion = cls.evasion + (DH.getMod(traits.Agility||8));
+  const hp = cls.hp;
+  const stress = cls.stress;
+  const evasion = cls.evasion;
 
   return `
     <div class="panel-grid-2">
@@ -1879,9 +1914,9 @@ function finalizeCharacter() {
   const anc = DH.ANCESTRIES.find(a => a.id === d.ancestry);
   const com = DH.COMMUNITIES.find(c => c.id === d.community);
   const traits = d.traits || { Agility:8, Strength:8, Finesse:8, Instinct:8, Knowledge:8, Presence:8 };
-  const hp = cls.hp + DH.getMod(traits.Strength) + 6;
-  const stress = cls.stress + DH.getMod(traits.Presence);
-  const evasion = cls.evasion + DH.getMod(traits.Agility);
+  const hp = cls.hp;  // Daggerheart: HP = class base, no modifier bonus
+  const stress = cls.stress;
+  const evasion = cls.evasion;
   const minorThr = Math.ceil(hp * 0.3);
   const majorThr = Math.ceil(hp * 0.6);
   const severeThr = Math.ceil(hp * 0.9);
@@ -2365,7 +2400,7 @@ async function callClaude(messages, systemPrompt) {
   }
 
   const body = {
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 800,
     system: String(systemPrompt || ''),
     messages: cleaned
@@ -3781,7 +3816,7 @@ NPC guerreiro austero com código de honra: menos provável. Bardo carismático:
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model:'claude-3-5-haiku-20241022',
+        model:'claude-3-haiku-20240307',
         max_tokens:150,
         messages:[{role:'user', content:prompt}]
       })
@@ -3835,7 +3870,7 @@ Se o NPC não estava presente ou a ação não tem impacto, use delta 0.`;
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model:'claude-3-5-haiku-20241022',
+        model:'claude-3-haiku-20240307',
         max_tokens:150,
         messages:[{role:'user', content:prompt}]
       })
@@ -3905,7 +3940,7 @@ Responda APENAS com JSON:
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model:'claude-3-5-haiku-20241022',
+        model:'claude-3-haiku-20240307',
         max_tokens:300,
         messages:[{role:'user', content:prompt}]
       })
@@ -3961,7 +3996,7 @@ Seja conservador: delta 0 se incerto. Só inclua NPCs realmente impactados.`;
         'anthropic-version':'2023-06-01',
         'anthropic-dangerous-direct-browser-access':'true'
       },
-      body: JSON.stringify({ model:'claude-3-5-haiku-20241022', max_tokens:200,
+      body: JSON.stringify({ model:'claude-3-haiku-20240307', max_tokens:200,
         messages:[{role:'user', content:prompt}] })
     });
     const data = await res.json();
@@ -4010,7 +4045,7 @@ Se não há NPC novo nomeado, responda: {"found": false}`;
         'anthropic-version':'2023-06-01',
         'anthropic-dangerous-direct-browser-access':'true'
       },
-      body: JSON.stringify({ model:'claude-3-5-haiku-20241022', max_tokens:200,
+      body: JSON.stringify({ model:'claude-3-haiku-20240307', max_tokens:200,
         messages:[{role:'user', content:prompt}] })
     });
     const data = await res.json();
@@ -4191,7 +4226,7 @@ async function generateQuestWithAI() {
   const c=STATE.character; const existing=(STATE.quests||[]).map(q=>q.title).join(', ')||'nenhuma';
   const prompt=`Crie uma miss\u00e3o para campanha Daggerheart.\nPersonagem: ${c?.name||'her\u00f3i'} ${c?.className||''} n\u00edvel ${c?.level||1}\nEstilo: ${STATE.settings.gmStyle}\nMiss\u00f5es j\u00e1 existentes: ${existing}\nResponda SOMENTE JSON: {"title":"","status":"active","urgency":"medium","desc":"2 frases","objectives":"[ ] obj1\\n[ ] obj2\\n[ ] obj3","reward":""}`;
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-3-5-haiku-20241022',max_tokens:400,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-3-haiku-20240307',max_tokens:400,messages:[{role:'user',content:prompt}]})});
     const data=await res.json(); const parsed=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim());
     STATE.quests.push({id:Date.now(),...parsed,session:STATE.campaign.currentSession?.number||1});
     saveState(); notify('\U0001F4CB Miss\u00e3o gerada: '+parsed.title,'ok'); renderQuests();
@@ -4283,7 +4318,7 @@ async function summarizeSessionInJournal() {
   notify('\u2728 Resumindo sess\u00e3o...','ok');
   const sessionNum=STATE.campaign.currentSession?.number||1;
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-3-5-haiku-20241022',max_tokens:600,messages:[{role:'user',content:`Escreva um resumo de di\u00e1rio em primeira pessoa como ${STATE.character?.name||'o her\u00f3i'}. Tom: ${STATE.settings.gmStyle}. M\u00e1ximo 3 par\u00e1grafos. O que aconteceu, descobriu, e como se sente.\n\nCenas:\n${log.slice(0,2000)}`}]})});
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':STATE.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-3-haiku-20240307',max_tokens:600,messages:[{role:'user',content:`Escreva um resumo de di\u00e1rio em primeira pessoa como ${STATE.character?.name||'o her\u00f3i'}. Tom: ${STATE.settings.gmStyle}. M\u00e1ximo 3 par\u00e1grafos. O que aconteceu, descobriu, e como se sente.\n\nCenas:\n${log.slice(0,2000)}`}]})});
     const data=await res.json(); const summary=data.content?.[0]?.text||'';
     STATE.journal=STATE.journal||[];
     STATE.journal.push({id:Date.now(),title:`Sess\u00e3o ${sessionNum} \u2014 Resumo`,category:'memory',body:summary,date:new Date().toLocaleDateString('pt-BR'),session:sessionNum});
