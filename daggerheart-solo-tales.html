@@ -3323,6 +3323,15 @@ function renderSettings() {
     </div>
 
     <div class="panel">
+      <h3>🔧 Diagnóstico da API</h3>
+      <p class="text-sm italic mb-12" style="color:var(--text-secondary)">
+        Clique para testar sua chave e ver a resposta exata da API.
+      </p>
+      <button class="btn btn-primary" onclick="testAPIRaw()">🔍 Testar API agora</button>
+      <div id="api-test-result" style="margin-top:12px;font-family:monospace;font-size:0.72rem;color:var(--text-secondary);background:var(--bg-void);padding:10px;border-radius:var(--radius);border:1px solid var(--border);display:none;word-break:break-all;white-space:pre-wrap;max-height:300px;overflow-y:auto"></div>
+    </div>
+
+    <div class="panel">
       <h3>Modelo da IA</h3>
       <p class="text-sm italic mb-12" style="color:var(--text-secondary)">
         Se aparecer "modelo não encontrado", tente outro modelo até funcionar.
@@ -3400,6 +3409,57 @@ function setSetting(key, value) {
   renderSettings();
 }
 
+
+async function testAPIRaw() {
+  const el = document.getElementById('api-test-result');
+  el.style.display = 'block';
+  el.textContent = 'Testando...';
+
+  if (!STATE.apiKey) {
+    el.textContent = 'ERRO: Nenhuma API key configurada.';
+    return;
+  }
+
+  el.textContent = 'Chave: ' + STATE.apiKey.substring(0,20) + '...\n';
+
+  const models = [
+    'claude-3-5-sonnet-20241022',
+    'claude-3-5-haiku-20241022',
+    'claude-3-haiku-20240307',
+    'claude-3-sonnet-20240229',
+    'claude-3-opus-20240229',
+  ];
+
+  for (const model of models) {
+    el.textContent += '\nTestando: ' + model + '...';
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': STATE.apiKey.trim(),
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: model,
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'Hi' }]
+        })
+      });
+      const raw = await res.text();
+      el.textContent += '\nHTTP ' + res.status + ': ' + raw.substring(0, 200);
+      if (res.ok) {
+        el.textContent += '\n\n✅ MODELO FUNCIONANDO: ' + model;
+        await setSetting('apiModel', model);
+        notify('✅ Modelo encontrado: ' + model, 'ok');
+        break;
+      }
+    } catch(e) {
+      el.textContent += '\nERRO: ' + e.message;
+    }
+  }
+}
 function toggleContentFlag(key) {
   STATE.settings[key] = !STATE.settings[key];
   saveState();
