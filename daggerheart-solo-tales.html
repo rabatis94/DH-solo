@@ -1263,6 +1263,7 @@ let STATE = {
     language: 'pt-BR',
     autoRoll: true,
     difficulty: 15,
+    apiModel: 'claude-3-haiku-20240307',
     allowGore: false,
     allowNudity: false,
     allowSex: false
@@ -2400,7 +2401,7 @@ async function callClaude(messages, systemPrompt) {
   }
 
   const body = {
-    model: 'claude-3-haiku-20240307',
+    model: STATE.settings.apiModel || 'claude-3-haiku-20240307',
     max_tokens: 800,
     system: String(systemPrompt || ''),
     messages: cleaned
@@ -3318,6 +3319,23 @@ function renderSettings() {
             <option value="es" ${s.language==='es'?'selected':''}>Español</option>
           </select>
         </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Modelo da IA</h3>
+      <p class="text-sm italic mb-12" style="color:var(--text-secondary)">
+        Se aparecer "modelo não encontrado", tente outro modelo até funcionar.
+      </p>
+      <div class="form-group">
+        <label>Modelo</label>
+        <select onchange="setSetting('apiModel',this.value)">
+          <option value="claude-3-haiku-20240307" ${s.apiModel==='claude-3-haiku-20240307'?'selected':''}>claude-3-haiku-20240307 (rápido, barato)</option>
+          <option value="claude-3-5-haiku-20241022" ${s.apiModel==='claude-3-5-haiku-20241022'?'selected':''}>claude-3-5-haiku-20241022</option>
+          <option value="claude-3-5-sonnet-20241022" ${s.apiModel==='claude-3-5-sonnet-20241022'?'selected':''}>claude-3-5-sonnet-20241022 (melhor qualidade)</option>
+          <option value="claude-3-sonnet-20240229" ${s.apiModel==='claude-3-sonnet-20240229'?'selected':''}>claude-3-sonnet-20240229</option>
+          <option value="claude-3-opus-20240229" ${s.apiModel==='claude-3-opus-20240229'?'selected':''}>claude-3-opus-20240229 (mais poderoso)</option>
+        </select>
       </div>
     </div>
 
