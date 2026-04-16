@@ -1029,6 +1029,7 @@ textarea { resize: vertical; min-height: 80px; }
 </head>
 <body>
 
+<div id="debug-overlay" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1a0000;color:#ff6666;font-family:monospace;font-size:11px;padding:8px;z-index:9999;max-height:150px;overflow-y:auto;white-space:pre-wrap;border-top:2px solid red"></div>
 <div id="app">
   <!-- SIDEBAR -->
   <aside id="sidebar">
@@ -1042,7 +1043,7 @@ textarea { resize: vertical; min-height: 80px; }
       <div class="nav-item active" onclick="navigate('home')"><span class="icon"><span class="nav-svg" style="color:var(--gold-dim)"><svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
   <path d="M10 2.5L1.5 10H4v7.5h4.5V13h3v4.5H16V10h2.5L10 2.5z"/>
 </svg></span></span> Início</div>
-      <div class="nav-item" onclick="navigate('play')"><span class="icon"><span class="nav-svg" style="color:var(--hope)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <div class="nav-item" onclick="goToPlay()"><span class="icon"><span class="nav-svg" style="color:var(--hope)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
   <path d="M2 2l5.5 5.5-1 1L2 4v4H1V2h4v1H2zm17.5 5.5L22 4V2h-4v1h3v3l-4.5 4.5 1 1zM2 22h4v-1H3v-3l5.5-5.5-1-1L2 18v-4H1v4.5L2 22zm20-4.5L22 13v4h-1v-3l-5.5-5.5-1 1L20 15v3h-3v1h4l1-1.5zM8.5 14l1.5-1.5-4-4L4.5 10 8.5 14zm6-8L13 7.5l4 4 1.5-1.5L14.5 6z"/>
 </svg></span></span> Jogar</div>
       <div class="nav-item" onclick="navigate('campstart')"><span class="icon"><span class="nav-svg" style="color:var(--silver)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -1310,6 +1311,17 @@ textarea { resize: vertical; min-height: 80px; }
 <div id="notification"></div>
 
 <script>
+// Global error handler — show errors on screen for mobile debugging
+window.addEventListener('error', function(e) {
+  const dbg = document.getElementById('debug-overlay');
+  if (dbg) { dbg.style.display='block'; dbg.textContent += 'ERROR: ' + e.message + ' (' + e.filename?.split('/').pop() + ':' + e.lineno + ')\n'; }
+  console.error('Global error:', e.message, e.lineno);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  const dbg = document.getElementById('debug-overlay');
+  if (dbg) { dbg.style.display='block'; dbg.textContent += 'PROMISE: ' + (e.reason?.message||e.reason) + '\n'; }
+});
+
 // ══════════════════════════════════════════════════════════════
 // DATA — Daggerheart SRD Reference
 // ══════════════════════════════════════════════════════════════
@@ -1444,6 +1456,8 @@ let STATE = {
     notes: '',
     startLocation: '',
   },
+  campaigns: [],
+  activeCampaignId: null,
   settings: {
     gmStyle: 'epic',
     language: 'pt-BR',
@@ -1470,6 +1484,11 @@ let STATE = {
 
 function saveState() {
   try {
+    // Sync active campaign back to campaigns array before saving
+    if (STATE.activeCampaignId && STATE.campaigns && STATE.campaigns.length > 0) {
+      const idx = STATE.campaigns.findIndex(c => c.id === STATE.activeCampaignId);
+      if (idx >= 0) STATE.campaigns[idx] = { ...STATE.campaign, id: STATE.activeCampaignId };
+    }
     const toSave = { ...STATE, creation: { step: 0, data: {} } };
     localStorage.setItem('dh_solo_state', JSON.stringify(toSave));
   } catch(e) { console.warn('Save error', e); }
@@ -1488,6 +1507,28 @@ function loadState() {
         if (!STATE.character.id) STATE.character.id = Date.now();
         STATE.characters = [STATE.character];
         STATE.activeCharacterId = STATE.character.id;
+      }
+      // Migration: if campaign exists but not in campaigns array, add it
+      if (!STATE.campaigns) STATE.campaigns = [];
+      if (STATE.campaign && STATE.campaign.name && STATE.campaigns.length === 0) {
+        const migCamp = { ...STATE.campaign, id: Math.floor(STATE.campaign.id) || Date.now() };
+        STATE.campaigns.push(migCamp);
+        STATE.activeCampaignId = migCamp.id;
+        STATE.campaign = migCamp;
+      }
+      // Normalize all campaign IDs to integers
+      if (STATE.campaigns) {
+        STATE.campaigns.forEach(function(camp) {
+          if (camp.id) camp.id = Math.floor(camp.id);
+        });
+      }
+      if (STATE.activeCampaignId) STATE.activeCampaignId = Math.floor(STATE.activeCampaignId);
+      if (STATE.campaign && STATE.campaign.id) STATE.campaign.id = Math.floor(STATE.campaign.id);
+
+      // Ensure active campaign is synced
+      if (STATE.activeCampaignId && STATE.campaigns && STATE.campaigns.length > 0) {
+        const ac = STATE.campaigns.find(c => c.id === STATE.activeCampaignId);
+        if (ac) STATE.campaign = ac;
       }
       // Ensure active character is synced
       if (STATE.activeCharacterId && STATE.characters && STATE.characters.length > 0) {
@@ -1540,6 +1581,12 @@ function navigate(page) {
   };
   if (renders[page]) renders[page]();
   updateQuickStats();
+  if (page === 'campaign') {
+    const pg = document.getElementById('page-campaign');
+    console.log('[navigate campaign] page el:', pg ? 'found' : 'NOT FOUND', 'has active:', pg?.classList.contains('active'), 'display:', pg ? window.getComputedStyle(pg).display : 'N/A');
+    const cc = document.getElementById('campaign-content');
+    console.log('[navigate campaign] content el:', cc ? 'found' : 'NOT FOUND', 'innerHTML length:', cc?.innerHTML?.length);
+  }
 }
 
 function toggleSidebar() {
@@ -1643,33 +1690,33 @@ function homeCharacters() {
     navigate('create');
     return;
   }
-  // If only one character and has campaign, go straight to play
-  if (chars.length === 1) {
-    const c = chars[0];
-    if (STATE.campaign.currentSession || STATE.campaign.sessions.length > 0) {
-      switchCharacter(c.id);
-      navigate('play');
-      return;
-    }
-  }
   navigate('characters');
 }
 
 function homeCampaign() {
-  const hasChar = (STATE.characters && STATE.characters.length > 0) || STATE.character;
-  if (!hasChar) {
-    STATE.creation = { step: 0, data: {} };
-    navigate('create');
-    notify('Crie um personagem primeiro para iniciar uma campanha.', 'ok');
+  navigate('campaign');
+}
+
+function goToPlay() {
+  const camps = STATE.campaigns || [];
+
+  // Legacy migration check
+  if (camps.length === 0 && STATE.campaign &&
+      (STATE.campaign.currentSession || (STATE.campaign.sessions||[]).length > 0)) {
+    navigate('play');
     return;
   }
-  // If no sessions yet, go through campstart setup
-  const hasSessions = STATE.campaign.currentSession || (STATE.campaign.sessions && STATE.campaign.sessions.length > 0);
-  if (!hasSessions) {
-    navigate('campstart');
+
+  if (camps.length === 0) {
+    notify('Nenhuma campanha encontrada. Crie uma campanha primeiro.', 'err');
+    navigate('campaign');
     return;
   }
-  navigate('play');
+  if (camps.length === 1) {
+    enterCampaign(camps[0].id);
+    return;
+  }
+  navigate('campaign');
 }
 
 function updateQuickStats() {
@@ -4287,133 +4334,155 @@ function renderCampaign() {
   const el = document.getElementById('campaign-content');
   if (!el) return;
 
-  const sessions = [...(STATE.campaign.sessions||[]), STATE.campaign.currentSession].filter(Boolean).reverse();
-  const chars = STATE.characters || [];
-  const c = STATE.character;
+  try {
+    // Ensure campaigns exists
+    if (!STATE.campaigns) STATE.campaigns = [];
+    console.log('[renderCampaign] campaigns:', STATE.campaigns?.length, 'campaign:', STATE.campaign?.name);
+    console.log('[renderCampaign] el:', el ? 'found' : 'NOT FOUND');
 
-  el.innerHTML = '';
-  const frag = document.createDocumentFragment();
+    // Migration: pull existing campaign into array
+    if (STATE.campaign && STATE.campaign.name) {
+      if (!STATE.campaign.id) STATE.campaign.id = Date.now();
+      const already = STATE.campaigns.find(function(x){ return x.id === STATE.campaign.id; });
+      if (!already) {
+        STATE.campaigns.push(STATE.campaign);
+        STATE.activeCampaignId = STATE.campaign.id;
+      }
+    }
 
-  function mkBtn(label, cls, onclick) {
-    const b = document.createElement('button');
-    b.className = cls;
-    b.textContent = label;
-    b.onclick = onclick;
-    return b;
-  }
-  function mkDiv(cls, style) {
-    const d = document.createElement('div');
-    if (cls) d.className = cls;
-    if (style) d.style.cssText = style;
-    return d;
-  }
-  function mkEl(tag, props) {
-    const e = document.createElement(tag);
-    if (props) Object.entries(props).forEach(([k,v]) => { if(k==='style') e.style.cssText=v; else if(k==='html') e.innerHTML=v; else if(k==='text') e.textContent=v; else e[k]=v; });
-    return e;
-  }
+    const campaigns = STATE.campaigns;
+    let html = '';
 
-  // Character switcher
-  if (chars.length > 1) {
-    const sw = mkDiv('panel', 'margin-bottom:16px');
-    sw.innerHTML = '<h3>Personagem Ativo</h3>';
-    const row = mkDiv('flex gap-8 flex-wrap');
-    chars.forEach(ch => {
-      const isActive = ch.id === STATE.activeCharacterId;
-      const btn = document.createElement('button');
-      btn.style.cssText = 'font-family:var(--font-display);font-size:0.68rem;padding:8px 14px;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.1em;border:1px solid ' + (isActive?'var(--gold)':'var(--border)') + ';background:' + (isActive?'#1a140a':'var(--bg-card)') + ';color:' + (isActive?'var(--gold)':'var(--text-secondary)');
-      btn.textContent = (ch.classIcon||'◆') + ' ' + (ch.name||'?');
-      btn.onclick = () => { switchCharacter(ch.id); renderCampaign(); };
-      row.appendChild(btn);
+    // Header
+    html += '<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">';
+    html += '<button class="btn btn-hope" onclick="createNewCampaign()">+ Nova Campanha</button>';
+    html += '<button class="btn btn-sm" onclick="exportData()">↓ Exportar</button>';
+    html += '</div>';
+
+    if (campaigns.length === 0) {
+      html += '<div style="text-align:center;padding:60px 20px;color:var(--text-dim)">';
+      html += '<div style="font-family:var(--font-display);font-size:2rem;color:var(--gold);opacity:0.3;margin-bottom:16px">≋</div>';
+      html += '<p style="font-family:var(--font-accent);font-style:italic;margin-bottom:20px">Nenhuma campanha ainda.</p>';
+      html += '<button class="btn btn-primary" onclick="createNewCampaign()">+ Criar Campanha</button>';
+      html += '</div>';
+      el.innerHTML = html;
+      return;
+    }
+
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">';
+
+    campaigns.forEach(function(camp) {
+      const isActive = camp.id === STATE.activeCampaignId;
+      const sessions = [].concat(camp.sessions||[]).concat(camp.currentSession ? [camp.currentSession] : []).filter(Boolean);
+      const charName = (STATE.characters||[]).find(function(c){ return c.id === camp.characterId; })?.name || STATE.character?.name || '';
+      const lastGMText = (function(){
+        for (var i = sessions.length-1; i >= 0; i--) {
+          const gm = ((sessions[i].log||[]).filter(function(e){ return e.type==='gm'; })).slice(-1)[0];
+          if (gm) return gm.text.slice(0,90)+'…';
+        }
+        return '';
+      })();
+
+      html += '<div style="background:var(--bg-card);border:1px solid ' + (isActive?'var(--gold)':'var(--border)') + ';border-radius:var(--radius-lg);padding:20px;position:relative;transition:all 0.25s;">';
+      if (isActive) {
+        html += '<div style="position:absolute;top:12px;right:12px;font-family:var(--font-display);font-size:0.55rem;color:var(--gold);letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--gold-dim);padding:2px 8px;border-radius:20px">Ativa</div>';
+      }
+      html += '<div style="font-family:var(--font-display);font-size:1rem;color:var(--gold-pale);letter-spacing:0.12em;margin-bottom:6px;padding-right:55px">' + (camp.name||'Sem título') + '</div>';
+      html += '<div style="font-size:0.7rem;color:var(--text-dim);font-family:var(--font-display);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px">';
+      if (charName) html += charName + ' · ';
+      html += sessions.length + ' sessão(ões)';
+      html += '</div>';
+      if (lastGMText) {
+        html += '<div style="font-family:var(--font-accent);font-style:italic;font-size:0.8rem;color:var(--text-secondary);line-height:1.5;margin-bottom:14px">' + lastGMText + '</div>';
+      }
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+      html += '<button class="btn btn-sm" style="color:var(--gold);border-color:var(--gold-dim)" onclick="enterCampaign(' + Math.floor(camp.id) + ')">✦ Jogar</button>';
+      html += '<button class="btn btn-sm" onclick="openCampaignDetail(' + Math.floor(camp.id) + ')">◈ Detalhes</button>';
+      html += '<button class="btn btn-sm btn-danger" onclick="deleteCampaignById(' + Math.floor(camp.id) + ')">✕</button>';
+      html += '</div>';
+      html += '</div>';
     });
-    sw.appendChild(row);
-    frag.appendChild(sw);
+
+    html += '</div>';
+    console.log('[renderCampaign] html length:', html.length, 'first 100:', html.slice(0,100));
+    el.innerHTML = html;
+    console.log('[renderCampaign] el.innerHTML length after set:', el.innerHTML.length);
+    console.log('[renderCampaign] el.offsetHeight:', el.offsetHeight, 'el.style.display:', el.style.display);
+    // Force visibility
+    el.style.minHeight = '200px';
+
+  } catch(err) {
+    el.innerHTML = '<div style="color:var(--fear);padding:20px;font-family:monospace;font-size:0.8rem">Erro ao carregar campanhas: ' + err.message + '</div>';
+    console.error('renderCampaign error:', err);
   }
-
-  // Grid: campaign info + character summary
-  const grid = mkDiv('panel-grid-2', 'margin-bottom:16px');
-
-  // Campaign panel
-  const campPanel = mkDiv('panel', 'margin:0');
-  campPanel.innerHTML = '<h3>Campanha</h3>' +
-    '<div class="form-group"><label>Nome</label><input type="text" id="camp-name" value="" style="margin-bottom:10px"></div>' +
-    '<div class="form-group"><label>Notas</label><textarea id="camp-notes" rows="4" placeholder="Facções, segredos..."></textarea></div>' +
-    '<div style="font-size:0.78rem;color:var(--text-dim);margin-top:8px">' + sessions.length + ' sessão(ões)</div>';
-  campPanel.querySelector('#camp-name').value = (STATE.campaign.name||'');
-  campPanel.querySelector('#camp-name').onchange = function() { STATE.campaign.name=this.value; saveState(); };
-  campPanel.querySelector('#camp-notes').value = (STATE.campaign.notes||'');
-  campPanel.querySelector('#camp-notes').onchange = function() { STATE.campaign.notes=this.value; saveState(); };
-  grid.appendChild(campPanel);
-
-  // Character summary panel
-  const charPanel = mkDiv('panel', 'margin:0');
-  if (c) {
-    const hpPct = Math.max(0,(c.hp/c.maxHp)*100);
-    const hpColor = hpPct>60?'var(--success)':hpPct>30?'var(--warn)':'var(--danger)';
-    charPanel.innerHTML = '<h3>Personagem</h3>' +
-      '<div style="font-family:var(--font-display);font-size:1rem;color:var(--gold-pale);margin-bottom:5px">' + (c.name||'') + '</div>' +
-      '<div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:12px">' + (c.classIcon||'') + ' ' + (c.className||'') + ' · Nível ' + (c.level||1) + '</div>' +
-      '<div class="highlight-box"><div>HP: <strong style="color:' + hpColor + '">' + c.hp + '/' + c.maxHp + '</strong></div>' +
-      '<div>Hope: <strong style="color:var(--gold)">' + (c.hopeTokens||0) + '</strong> &nbsp; Stress: <strong style="color:var(--warn)">' + (c.stress||0) + '</strong></div>' +
-      '<div style="margin-top:3px">XP: ' + (c.xp||0) + '</div></div>';
-    const btnRow = mkDiv('flex gap-8 mt-12 flex-wrap');
-    [
-      ['+XP','btn btn-sm', ()=>gainXP()],
-      ['↑ Nível','btn btn-sm btn-hope', ()=>levelUp()],
-      ['◈ Ver Todos','btn btn-sm', ()=>navigate('characters')],
-      ['+ Criar Novo','btn btn-sm', ()=>navigate('create')],
-    ].forEach(([label,cls,fn]) => btnRow.appendChild(mkBtn(label,cls,fn)));
-    charPanel.appendChild(btnRow);
-  } else {
-    charPanel.innerHTML = '<h3>Personagem</h3><p class="text-dim italic">Sem personagem.</p>';
-    charPanel.appendChild(mkBtn('✶ Criar Personagem','btn btn-primary', ()=>navigate('create')));
-  }
-  grid.appendChild(charPanel);
-  frag.appendChild(grid);
-
-  // Session history
-  const histPanel = mkDiv('panel', 'margin-bottom:16px');
-  const histHead = mkDiv('flex align-center justify-between mb-12');
-  histHead.innerHTML = '<h3 style="margin:0">Histórico de Sessões</h3>';
-  const newSessBtn = mkBtn('+ Nova Sessão','btn btn-sm btn-primary', ()=>navigate('play'));
-  histHead.appendChild(newSessBtn);
-  histPanel.appendChild(histHead);
-
-  if (sessions.length === 0) {
-    histPanel.innerHTML += '<p class="text-dim italic" style="text-align:center;padding:20px">Nenhuma sessão ainda.</p>';
-  } else {
-    sessions.forEach(s => {
-      const entry = mkDiv('session-entry');
-      const preview = (s.log||[]).find(e=>e.type==='gm')?.text?.slice(0,100)||'...';
-      entry.innerHTML = '<div class="session-entry-meta"><h4>' + (s.title||'Sessão') + ' — ' + (s.date||'') + '</h4><span class="session-badge">' + (s.log||[]).length + ' entradas</span></div><p>' + preview + '...</p>';
-      entry.onclick = () => viewSession(s.id);
-      histPanel.appendChild(entry);
-    });
-  }
-  frag.appendChild(histPanel);
-
-  // Export panel
-  const expPanel = mkDiv('panel');
-  expPanel.innerHTML = '<h3>Salvar / Exportar</h3>';
-  const expRow = mkDiv('flex gap-8 flex-wrap');
-  expRow.appendChild(mkBtn('↓ Exportar JSON','btn btn-sm', ()=>exportData()));
-  const impBtn = mkBtn('↑ Importar JSON','btn btn-sm', ()=>document.getElementById('import-file-c').click());
-  expRow.appendChild(impBtn);
-  const impInput = document.createElement('input');
-  impInput.type='file'; impInput.id='import-file-c'; impInput.accept='.json'; impInput.style.display='none';
-  impInput.onchange = importData;
-  expRow.appendChild(impInput);
-  expRow.appendChild(mkBtn('✕ Apagar Campanha','btn btn-sm btn-danger', ()=>deleteCampaign()));
-  expRow.appendChild(mkBtn('✕ Resetar Tudo','btn btn-sm btn-danger', ()=>{ if(confirm('Apagar TUDO?')) clearAll(); }));
-  expPanel.appendChild(expRow);
-  const note = document.createElement('p');
-  note.style.cssText='font-size:0.8rem;font-style:italic;color:var(--text-dim);margin-top:8px';
-  note.textContent='Dados salvos automaticamente no navegador.';
-  expPanel.appendChild(note);
-  frag.appendChild(expPanel);
-
-  el.appendChild(frag);
 }
+
+function createNewCampaign() {
+  const newCamp = {
+    id: Date.now(),
+    name: 'Nova Campanha',
+    sessions: [],
+    currentSession: null,
+    notes: '',
+    startLocation: '',
+    characterId: STATE.activeCharacterId || null,
+  };
+  if (!STATE.campaigns) STATE.campaigns = [];
+  STATE.campaigns.push(newCamp);
+  STATE.campaign = newCamp;
+  STATE.activeCampaignId = newCamp.id;
+  saveState();
+  navigate('campstart');
+}
+
+function enterCampaign(id) {
+  const camp = STATE.campaigns.find(c => c.id === id);
+  if (!camp) return;
+  // Sync current campaign
+  if (STATE.activeCampaignId && STATE.campaigns.length > 0) {
+    const cur = STATE.campaigns.find(c => c.id === STATE.activeCampaignId);
+    if (cur) Object.assign(cur, STATE.campaign);
+  }
+  STATE.campaign = camp;
+  STATE.activeCampaignId = id;
+  // Set character if campaign has one linked
+  if (camp.characterId) {
+    const ch = STATE.characters.find(c => c.id === camp.characterId);
+    if (ch) { STATE.character = ch; STATE.activeCharacterId = ch.id; }
+  }
+  saveState();
+  updateQuickStats();
+  navigate('play');
+}
+
+function deleteCampaignById(id) {
+  const camp = STATE.campaigns.find(c => c.id === id);
+  if (!camp) return;
+  if (!confirm('Apagar "' + camp.name + '"? Esta ação não pode ser desfeita.')) return;
+  STATE.campaigns = STATE.campaigns.filter(c => c.id !== id);
+  if (STATE.activeCampaignId === id) {
+    if (STATE.campaigns.length > 0) {
+      STATE.campaign = STATE.campaigns[0];
+      STATE.activeCampaignId = STATE.campaigns[0].id;
+    } else {
+      STATE.campaign = { name:'Minha Campanha', sessions:[], currentSession:null, notes:'', startLocation:'' };
+      STATE.activeCampaignId = null;
+    }
+  }
+  saveState();
+  renderCampaign();
+  notify(camp.name + ' apagada.', 'ok');
+}
+
+function openCampaignDetail(id) {
+  const camp = STATE.campaigns.find(c => c.id === id);
+  if (!camp) return;
+  STATE.campaign = camp;
+  STATE.activeCampaignId = id;
+  saveState();
+  navigate('campstart');
+}
+
 function gainXP() { if(STATE.character){STATE.character.xp=(STATE.character.xp||0)+1;saveState();renderCampaign();notify('XP ganho!');} }
 function levelUp() {
   if (!STATE.character) return;
