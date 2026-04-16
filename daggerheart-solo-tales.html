@@ -170,6 +170,8 @@ nav { flex: 1; padding: 8px 0; }
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  height: 100%;
+  min-height: 0;
 }
 
 #topbar {
@@ -222,14 +224,22 @@ nav { flex: 1; padding: 8px 0; }
 .qstat span { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; }
 
 /* ── PAGES ── */
-#pages { flex: 1; overflow: hidden; position: relative; }
-.page {
-  position: absolute; inset: 0;
+#pages {
+  flex: 1;
   overflow-y: auto;
-  padding: 24px;
-  display: none;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  min-height: 0;
 }
-.page.active { display: block; }
+.page {
+  display: none;
+  padding: 24px;
+  box-sizing: border-box;
+  min-height: 100%;
+}
+.page.active {
+  display: block !important;
+}
 
 /* ── HOME ── */
 #page-home {
@@ -238,7 +248,7 @@ nav { flex: 1; padding: 8px 0; }
     radial-gradient(ellipse at 20% 50%, #1a2a4a18 0%, transparent 60%),
     radial-gradient(ellipse at 80% 20%, #3a1a2a18 0%, transparent 60%);
 }
-#page-home.active { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+#page-home.active { display: flex !important; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .home-emblem {
   font-size: 5rem;
   margin-bottom: 20px;
@@ -1056,16 +1066,10 @@ textarea { resize: vertical; min-height: 80px; }
       <div class="nav-item" onclick="navigate('characters')"><span class="icon"><span class="nav-svg" style="color:var(--silver)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
   <path d="M12 2a5 5 0 100 10A5 5 0 0012 2zm0 2a3 3 0 110 6 3 3 0 010-6zM4 20c0-4 3.6-7 8-7s8 3 8 7H4z"/>
 </svg></span></span> Personagens</div>
-      <div class="nav-item" onclick="navigate('dice')"><span class="icon"><span class="nav-svg" style="color:var(--silver)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 2L3 7v10l9 5 9-5V7L12 2zm0 2.3L19.1 8 12 11.8 4.9 8 12 4.3zM4 9.4l7 3.9v7.4L4 17V9.4zm9 11.3v-7.4l7-3.9V17l-7 3.7z"/>
-</svg></span></span> Dados</div>
       <div class="nav-section">Campanha</div>
       <div class="nav-item" onclick="navigate('campaign')"><span class="icon"><span class="nav-svg" style="color:var(--gold-dim)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
   <path d="M4 2a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2V4a2 2 0 00-2-2H4zm0 2h7v14H4V4zm9 0h7v14h-7V4zm-7 2v2h5V6H6zm2 3v2h3V9H8zm9-3v2h5V6h-5zm1 3v2h4V9h-4z"/>
 </svg></span></span> Campanha</div>
-      <div class="nav-item" onclick="navigate('combat')"><span class="icon"><span class="nav-svg" style="color:var(--fear)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-  <path d="M14.5 2C11.5 2 9 4 9 6.5c0 1 .3 2 .9 2.7L3 17l1.4 1.4 1-1 1 1L8 17l-1-1 5.8-6.3c.7.4 1.5.8 2.2.8C18 10.5 20 8.5 20 6c0-2.2-2-4-5.5-4zM14.5 4C17 4 18 5 18 6s-1.5 2.5-3.5 2.5S11 7.2 11 6.5 12 4 14.5 4z"/>
-</svg></span></span> Combate</div>
       <div class="nav-item" onclick="navigate('settings')"><span class="icon"><span class="nav-svg" style="color:var(--text-dim)"><svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
   <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm0 2a2 2 0 110 4 2 2 0 010-4zM10.1 2l-.6 2.5A8 8 0 007 6.1L4.6 5 2 7.6l1.1 2.4A8 8 0 002 12v.3l-2 .7.6 2.7 2.4-.3A8 8 0 006.1 17l-1.1 2.4L7.6 22l2.4-1.1A8 8 0 0012 22h.3l.7 2 2.7-.6-.3-2.4A8 8 0 0017 17.9l2.4 1.1L22 16.4l-1.1-2.4A8 8 0 0022 12v-.3l2-.7-.6-2.7-2.4.3A8 8 0 0017 6.1l1.1-2.4L15.4 2l-2.4 1.1A8 8 0 0012 2h-.3L11 0l-2.7.6.3 2.4A8 8 0 0010.1 2z"/>
 </svg></span></span> Configurações</div>
@@ -1212,11 +1216,30 @@ textarea { resize: vertical; min-height: 80px; }
                     <option value="Presence">Presence</option>
                   </select>
                 </div>
-                <div style="display:flex;gap:10px;justify-content:center">
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
                   <div>
                     <label style="font-size:0.65rem;color:var(--text-dim);display:block;margin-bottom:5px;letter-spacing:0.1em;text-transform:uppercase">DC</label>
                     <input type="number" id="roll-popup-dc" value="15" min="5" max="30" style="background:var(--bg-panel);border:1px solid var(--border);color:var(--text-primary);padding:6px 10px;border-radius:var(--radius);width:70px;text-align:center;font-family:var(--font-display)">
                   </div>
+                  <div style="text-align:center">
+                    <label style="font-size:0.65rem;color:var(--text-dim);display:block;margin-bottom:5px;letter-spacing:0.1em;text-transform:uppercase">Experiência</label>
+                    <div style="display:flex;align-items:center;gap:6px;padding-top:2px;justify-content:center">
+                      <input type="checkbox" id="roll-popup-exp" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold)">
+                      <span style="font-size:0.68rem;color:var(--text-dim)">+2 (−1 ✦)</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="font-size:0.65rem;color:var(--text-dim);display:block;margin-bottom:5px;letter-spacing:0.1em;text-transform:uppercase">Experiência</label>
+                    <select id="roll-popup-exp" style="background:var(--bg-panel);border:1px solid var(--border);color:var(--text-primary);padding:6px 10px;border-radius:var(--radius);font-family:var(--font-display);font-size:0.72rem">
+                      <option value="0">Nenhuma</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="margin-top:10px">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font-display);font-size:0.68rem;color:var(--gold);letter-spacing:0.1em">
+                    <input type="checkbox" id="roll-popup-hope-bonus" style="width:14px;height:14px">
+                    Gastar 1 Hope por +3 no total
+                  </label>
                 </div>
               </div>
             </div>
@@ -1555,10 +1578,16 @@ function loadApiKey() {
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════
 function navigate(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.remove('active');
+    p.style.display = '';
+  });
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const el = document.getElementById('page-' + page);
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+    el.style.display = 'block';
+  }
   const navEls = document.querySelectorAll('.nav-item');
   navEls.forEach(n => { if (n.getAttribute('onclick')?.includes(page)) n.classList.add('active'); });
 
@@ -1581,12 +1610,7 @@ function navigate(page) {
   };
   if (renders[page]) renders[page]();
   updateQuickStats();
-  if (page === 'campaign') {
-    const pg = document.getElementById('page-campaign');
-    console.log('[navigate campaign] page el:', pg ? 'found' : 'NOT FOUND', 'has active:', pg?.classList.contains('active'), 'display:', pg ? window.getComputedStyle(pg).display : 'N/A');
-    const cc = document.getElementById('campaign-content');
-    console.log('[navigate campaign] content el:', cc ? 'found' : 'NOT FOUND', 'innerHTML length:', cc?.innerHTML?.length);
-  }
+
 }
 
 function toggleSidebar() {
@@ -1822,23 +1846,65 @@ function stepConcept(data) {
 }
 
 function stepAncestry(data) {
-  const cards = DH.ANCESTRIES.map(a => `
-    <div class="ancestry-card ${data.ancestry===a.id?'selected':''}" onclick="selectCreation('ancestry','${a.id}')">
+  const cards = DH.ANCESTRIES.map(a => {
+    const sel1 = data.ancestry === a.id;
+    const sel2 = data.ancestry2 === a.id;
+    return `<div class="ancestry-card ${sel1?'selected':sel2?'selected-2':''}" onclick="selectAncestry('${a.id}')">
       <div class="ancestry-icon">${a.icon}</div>
       <div class="ancestry-name">${a.name}</div>
       <div class="ancestry-trait" style="color:var(--text-dim);font-size:0.65rem;margin-top:2px">${a.trait}</div>
-    </div>
-  `).join('');
+      ${sel1?'<div style="font-size:0.6rem;color:var(--gold);margin-top:3px">Primária</div>':''}
+      ${sel2?'<div style="font-size:0.6rem;color:var(--accent);margin-top:3px">Secundária</div>':''}
+    </div>`;
+  }).join('');
+
+  const anc1 = DH.ANCESTRIES.find(a => a.id === data.ancestry);
+  const anc2 = data.ancestry2 ? DH.ANCESTRIES.find(a => a.id === data.ancestry2) : null;
+
   return `
-    <p class="text-sm italic" style="margin-bottom:14px;color:var(--text-secondary)">
+    <p class="text-sm italic" style="margin-bottom:6px;color:var(--text-secondary)">
       Ancestralidade define sua herança física e habilidade racial inata.
     </p>
-    <div class="ancestry-grid">${cards}</div>
-    ${data.ancestry ? `<div class="highlight-box mt-12">
-      ${DH.ANCESTRIES.find(a=>a.id===data.ancestry)?.bonus || ''}
+    <p class="text-sm" style="margin-bottom:14px;color:var(--text-dim);font-size:0.8rem">
+      Clique uma vez para <span style="color:var(--gold)">ancestralidade primária</span>.
+      Clique novamente em outra para adicionar uma <span style="color:var(--accent)">ancestralidade secundária</span> (híbrido).
+      Clique na secundária para removê-la.
+    </p>
+    ${anc1 ? `<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="padding:8px 14px;border:1px solid var(--gold);border-radius:var(--radius);font-size:0.8rem;color:var(--gold)">
+        ✦ ${anc1.name} <span style="font-size:0.7rem;color:var(--text-dim)">${anc1.trait}</span>
+      </div>
+      ${anc2 ? `<div style="padding:8px 14px;border:1px solid var(--accent);border-radius:var(--radius);font-size:0.8rem;color:var(--accent)">
+        + ${anc2.name} <span style="font-size:0.7rem;color:var(--text-dim)">${anc2.trait}</span>
+      </div>` : ''}
     </div>` : ''}
+    <div class="ancestry-grid">${cards}</div>
   `;
 }
+
+function selectAncestry(id) {
+  const data = STATE.creation.data;
+  if (!data.ancestry) {
+    // No primary — set as primary
+    data.ancestry = id;
+  } else if (data.ancestry === id) {
+    // Clicking primary — clear both
+    data.ancestry = null;
+    data.ancestry2 = null;
+  } else if (!data.ancestry2) {
+    // Has primary, no secondary — set secondary
+    data.ancestry2 = id;
+  } else if (data.ancestry2 === id) {
+    // Clicking secondary — remove secondary
+    data.ancestry2 = null;
+  } else {
+    // Has both — replace secondary
+    data.ancestry2 = id;
+  }
+  saveCreationStepData();
+  document.getElementById('creation-body').innerHTML = stepAncestry(data);
+}
+
 
 function stepCommunity(data) {
   const cards = DH.COMMUNITIES.map(c => `
@@ -2040,6 +2106,23 @@ async function aiGenerateFullConcept() {
     notify('✦ Conceito gerado! Revise e ajuste.', 'ok');
   } catch(e) {
     notify('Erro: ' + e.message, 'err');
+  }
+}
+
+function toggleHybridAncestry(enabled) {
+  const area = document.getElementById('ancestry-second');
+  if (area) area.style.display = enabled ? 'block' : 'none';
+  if (enabled) {
+    const grid2 = document.getElementById('ancestry-grid-2');
+    if (grid2) {
+      grid2.innerHTML = DH.ANCESTRIES.map(a => `
+        <div class="ancestry-card" id="anc2-${a.id}" onclick="selectCreation('ancestry2','${a.id}')">
+          <div class="ancestry-icon">${a.icon}</div>
+          <div class="ancestry-name">${a.name}</div>
+        </div>`).join('');
+    }
+  } else {
+    STATE.creation.data.ancestry2 = null;
   }
 }
 
@@ -2415,6 +2498,19 @@ function showRollPopup(trait, dc, context) {
   const dcInput = document.getElementById('roll-popup-dc');
   if (dcInput && dc) dcInput.value = dc;
 
+  // Populate experience dropdown
+  const expSelect = document.getElementById('roll-popup-exp');
+  if (expSelect) {
+    const exps = (STATE.character?.experiences || []).filter(Boolean);
+    expSelect.innerHTML = '<option value="0">Nenhuma (+0)</option>';
+    exps.forEach((exp, i) => {
+      const opt = document.createElement('option');
+      opt.value = '2';
+      opt.textContent = exp + ' (+2)';
+      expSelect.appendChild(opt);
+    });
+  }
+
   // Set title
   document.getElementById('roll-popup-title').textContent =
     'Role ' + (trait || 'Atributo') + (dc ? ' — DC ' + dc : '');
@@ -2431,15 +2527,33 @@ function closeRollPopup() {
 }
 
 async function executePopupRoll() {
-  const trait   = document.getElementById('roll-popup-trait')?.value || 'Instinct';
-  const dc      = parseInt(document.getElementById('roll-popup-dc')?.value) || 15;
-  const context = _rollPopupContext || '';
+  const trait      = document.getElementById('roll-popup-trait')?.value || 'Instinct';
+  const dc         = parseInt(document.getElementById('roll-popup-dc')?.value) || 15;
+  const useExp  = document.getElementById('roll-popup-exp')?.checked || false;
+  const expBonus   = parseInt(document.getElementById('roll-popup-exp')?.value) || 0;
+  const hopeSpend  = document.getElementById('roll-popup-hope-bonus')?.checked || false;
+  const context    = _rollPopupContext || '';
   closeRollPopup();
+  // Spend 1 Hope for Experience
+  if (useExp) {
+    if ((STATE.character?.hopeTokens || 0) < 1) { notify('Hope insuficiente!', 'err'); return; }
+    STATE.character.hopeTokens = Math.max(0, STATE.character.hopeTokens - 1);
+    updateQuickStats(); saveState();
+  }
 
   if (!STATE.character) return;
+
+  // Spend Hope if requested
+  if (hopeSpend) {
+    if ((STATE.character.hopeTokens || 0) < 1) {
+      notify('Sem Hope tokens para gastar!', 'err');
+    } else {
+      STATE.character.hopeTokens = Math.max(0, STATE.character.hopeTokens - 1);
+    }
+  }
+  const hopeMod   = hopeSpend ? 3 : 0;
   const modifier  = DH.getMod(STATE.character.traits[trait] || 8);
-  const expBonus  = checkExperienceBonus(context);
-  const totalMod  = modifier + expBonus;
+  const totalMod  = modifier + expBonus + hopeMod;
   const { hope, fear } = rollDuality();
   const result    = resolveDuality(hope, fear, totalMod, dc);
 
@@ -3019,14 +3133,23 @@ function renderSessionTab(tab) {
     // Bag + gold
     const items = c?.bagItems || [];
     el.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <div style="font-family:var(--font-display);font-size:0.78rem;color:var(--gold);letter-spacing:0.1em">
-          Ouro: <strong>${c?.gold||0}</strong>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:120px">
+          <div style="font-family:var(--font-display);font-size:0.62rem;color:var(--text-dim);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:5px">HP</div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-family:var(--font-display);color:var(--success)">${c?.hp||0}/${c?.maxHp||0}</span>
+            <button class="btn btn-sm" onclick="applyDamageToSelf(1); renderSessionTab('bag')" style="padding:2px 7px;border-color:#3a1a20;color:var(--fear)">−1</button>
+            <button class="btn btn-sm" onclick="applyDamageToSelf(5); renderSessionTab('bag')" style="padding:2px 7px;border-color:#3a1a20;color:var(--fear)">−5</button>
+            <button class="btn btn-sm" onclick="healSelf(1); renderSessionTab('bag')" style="padding:2px 7px;border-color:#1a3a18;color:var(--success)">+1</button>
+          </div>
         </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm" onclick="adjustGold(-1)" style="padding:3px 8px">−1</button>
-          <button class="btn btn-sm" onclick="adjustGold(+1)" style="padding:3px 8px">+1</button>
-          <button class="btn btn-sm" onclick="adjustGold(+10)" style="padding:3px 8px">+10</button>
+        <div style="flex:1;min-width:120px">
+          <div style="font-family:var(--font-display);font-size:0.62rem;color:var(--text-dim);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:5px">Ouro</div>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-family:var(--font-display);color:var(--gold)">${c?.gold||0}</span>
+            <button class="btn btn-sm" onclick="adjustGold(-1); renderSessionTab('bag')" style="padding:2px 7px">−1</button>
+            <button class="btn btn-sm" onclick="adjustGold(+1); renderSessionTab('bag')" style="padding:2px 7px">+1</button>
+          </div>
         </div>
       </div>
       <div style="margin-bottom:8px">
@@ -3164,11 +3287,32 @@ function renderSessionTab(tab) {
   }
 
   else if (tab === 'combat-panel') {
+    const pc = STATE.character;
+    const pcHpPct = pc ? Math.max(0,(pc.hp/pc.maxHp)*100) : 0;
+    const pcHpColor = pcHpPct>60?'var(--success)':pcHpPct>30?'var(--warn)':'var(--danger)';
     el.innerHTML = `
+      <!-- Player HP bar -->
+      ${pc ? `<div style="background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-family:var(--font-display);font-size:0.75rem;color:var(--parchment)">${pc.name}</span>
+          <span style="font-size:0.8rem;color:${pcHpColor};font-weight:bold">${pc.hp} / ${pc.maxHp}</span>
+        </div>
+        <div style="height:6px;background:var(--bg-void);border-radius:3px;overflow:hidden;margin-bottom:8px">
+          <div style="height:100%;width:${pcHpPct}%;background:${pcHpColor};border-radius:3px;transition:width 0.4s"></div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button onclick="adjustHP(-1); renderSessionTab('combat-panel')" style="background:none;border:1px solid var(--border);color:var(--text-dim);font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">−1</button>
+          <button onclick="adjustHP(-5); renderSessionTab('combat-panel')" style="background:none;border:1px solid #3a1a20;color:var(--fear);font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">−5</button>
+          <button onclick="adjustHP(-10); renderSessionTab('combat-panel')" style="background:none;border:1px solid #3a1a20;color:var(--fear);font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">−10</button>
+          <button onclick="adjustHP(+1); renderSessionTab('combat-panel')" style="background:none;border:1px solid #1a3a18;color:var(--success);font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">+1</button>
+          <button onclick="adjustHP(+5); renderSessionTab('combat-panel')" style="background:none;border:1px solid #1a3a18;color:var(--success);font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">+5</button>
+          <span style="font-size:0.65rem;color:var(--text-dim);align-self:center">Stress: ${pc.stress}/${pc.maxStress}</span>
+        </div>
+      </div>` : ''}
       <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:var(--font-display);font-size:0.68rem;color:var(--text-dim);letter-spacing:0.1em">RODADA ${STATE.combat.round}</span>
         <button class="btn btn-sm" onclick="nextRound(); renderSessionTab('combat-panel')">+ Rodada</button>
-        <button class="btn btn-sm" onclick="navigate('combat')">† Ver Combate Completo</button>
+        <button class="btn btn-sm" onclick="navigate('combat')">† Ver Completo</button>
         <button class="btn btn-sm btn-danger" onclick="clearCombat(); renderSessionTab('combat-panel')">✕ Limpar</button>
       </div>
       ${STATE.combat.enemies.length === 0
@@ -3551,13 +3695,73 @@ function buildGMSystem() {
   parts.push('PENSAMENTOS (tipo: pensamento):');
   parts.push('- Reconheça internamente. Pode adicionar detalhe que o personagem notaria com seu background.');
   parts.push('');
-  parts.push('SEMPRE:');
+  // Build established facts from recent session log
+  const recentGM = sessionLog ? sessionLog.filter(e=>e.type==='gm').slice(-8).map(e=>e.text.slice(0,120)).join(' | ') : '';
+
+  parts.push('── ANTI-ALUCINAÇÃO — REGRA ABSOLUTA ──');
+  parts.push('');
+  parts.push('CHECKPOINT OBRIGATÓRIO antes de qualquer narração:');
+  parts.push('  PASSO 1 — Leia as últimas 5-10 mensagens do histórico.');
+  parts.push('  PASSO 2 — Liste mentalmente o que foi estabelecido como CÂNON (nomes, fatos, promessas, locais).');
+  parts.push('  PASSO 3 — SÓ ENTÃO escreva a resposta.');
+  parts.push('');
+  parts.push('REGRAS DE OURO:');
+  parts.push('  • Pergunta factual sobre algo já revelado = PEDIDO DE CLARIFICAÇÃO. Nunca = contradição.');
+  parts.push('  • Se um NPC disse X antes, ele mantém X. NPCs não mudam de versão sem motivação explícita.');
+  parts.push('  • Se não lembra de um detalhe → diga "você não tem como saber isso ainda" ou peça rolagem.');
+  parts.push('  • NUNCA invente detalhes sobre o passado de um NPC que contradizem o que ele já revelou.');
+  parts.push('  • Emoção narrativa NÃO justifica contradição factual. Prefira consistência a drama falso.');
+  parts.push('');
+  if (recentGM) {
+    parts.push('CÂNON ESTABELECIDO NESTA SESSÃO (use para verificar):');
+    parts.push(recentGM);
+  }
+  parts.push('');
+  parts.push('── DIFICULDADE E CONSEQUÊNCIAS ──');
+  parts.push('');
+  parts.push('PRINCÍPIO GERAL: Nada importante é fácil. O mundo reage ao personagem com realismo.');
+  parts.push('');
+  parts.push('PERSUASÃO E INFLUÊNCIA:');
+  parts.push('  • Convencer alguém exige argumentos alinhados aos VALORES e INTERESSES deles, não aos seus.');
+  parts.push('  • Uma única conversa raramente resolve. Pessoas desconfiam de estranhos.');
+  parts.push('  • Falhas em persuasão têm consequências: suspeita, alertas, portas fechadas.');
+  parts.push('  • DC base: 15–20. Reduz com histórico de confiança, presentes, missões cumpridas.');
+  parts.push('');
+  parts.push('FACÇÕES E ALINHAMENTO:');
+  parts.push('  • Ações que contradizem a facção/propósito do personagem geram atrito interno e externo.');
+  parts.push('  • Aliados de facções opostas são desconfiados por padrão.');
+  parts.push('  • Ganhar aliados: requer múltiplas interações, provar valor, ou sacrifícios concretos.');
+  parts.push('');
+  parts.push('ROMANCE E RELACIONAMENTOS:');
+  parts.push('  • Romance é LENTO. Exige conversas, vulnerabilidade, ações que demonstram interesse genuíno.');
+  parts.push('  • Cada NPC tem seus próprios medos, desejos, limites e histórico. Respeite-os.');
+  parts.push('  • Rejeição é real e pode ser permanente se o personagem forçar a situação.');
+  parts.push('  • Afeto cresce gradualmente (afinidade 0→30→60→80). Não pule etapas.');
+  parts.push('');
+  parts.push('CONTEÚDO ADULTO (se habilitado):');
+  parts.push('  • Intimidade física só acontece após construção emocional real (afinidade ≥ 70+).');
+  parts.push('  • A pessoa tem vontade própria. Pode recusar, hesitar, ter condições.');
+  parts.push('  • Consequências narrativas reais: ciúmes, vínculos, responsabilidades.');
+  parts.push('');
+  parts.push('── CONTINUIDADE ──');
   parts.push('- NUNCA invente regras fora do Daggerheart.');
-  parts.push('- CONTINUIDADE É CRÍTICA: cada resposta continua exatamente de onde a cena parou.');
-  parts.push('- Se o personagem disse algo numa cela, a próxima cena continua na cela — NÃO pule para outro local.');
+  parts.push('- Cada resposta continua EXATAMENTE de onde a cena parou.');
   parts.push('- Uma fala, pensamento ou pergunta NÃO avança o tempo nem muda o cenário.');
-  parts.push('- Só avance o cenário quando o personagem AGIR de forma que justifique movimento.');
+  parts.push('- Só avance quando o personagem AGIR de forma que justifique movimento.');
   parts.push('- Não revele o que o personagem não poderia saber.');
+  parts.push('- Híbridos de ancestralidade existem no mundo — trate-os como seres reais com histórias próprias.');
+
+  // Hybrid ancestry note
+  const anc2 = c?.ancestry2;
+  if (anc2) {
+    const anc2Data = DH.ANCESTRIES.find(a => a.id === anc2);
+    parts.push('HÍBRIDO: ' + (c?.ancestryName||'?') + ' + ' + (anc2Data?.name||anc2) + ' — este personagem carrega traços de ambas as ancestralidades.');
+  }
+
+  // Pregnancy note (implicit, based on content flags)
+  if (s.allowSex || s.allowNudity) {
+    parts.push('GRAVIDEZ: Possível nas circunstâncias certas. Trate com realismo — tem consequências narrativas duradouras.');
+  }
 
   return parts.join('\n');
 }
@@ -4191,6 +4395,22 @@ function rollDamageDie(dieStr) {
   return rollDX(parseInt(dieStr)||6);
 }
 
+function applyDamageToSelf(amount) {
+  if (!STATE.character) return;
+  STATE.character.hp = Math.max(0, STATE.character.hp - amount);
+  saveState();
+  updateQuickStats();
+  notify('−' + amount + ' HP → ' + STATE.character.hp + '/' + STATE.character.maxHp, 'err');
+}
+
+function healSelf(amount) {
+  if (!STATE.character) return;
+  STATE.character.hp = Math.min(STATE.character.maxHp, STATE.character.hp + amount);
+  saveState();
+  updateQuickStats();
+  notify('+' + amount + ' HP → ' + STATE.character.hp + '/' + STATE.character.maxHp, 'ok');
+}
+
 function applyDamageToEnemy(idx, dmg, update=true) {
   STATE.combat.enemies[idx].hp = Math.max(0, STATE.combat.enemies[idx].hp - dmg);
   if (STATE.combat.enemies[idx].hp <= 0) STATE.combat.enemies[idx].defeated = true;
@@ -4334,12 +4554,14 @@ function renderCampaign() {
   const el = document.getElementById('campaign-content');
   if (!el) return;
 
+  // IMMEDIATE TEST — write something visible before any logic
+  el.style.cssText = 'background:red;color:white;padding:20px;display:block';
+  el.textContent = 'renderCampaign called...';
+
   try {
     // Ensure campaigns exists
     if (!STATE.campaigns) STATE.campaigns = [];
-    console.log('[renderCampaign] campaigns:', STATE.campaigns?.length, 'campaign:', STATE.campaign?.name);
-    console.log('[renderCampaign] el:', el ? 'found' : 'NOT FOUND');
-
+    
     // Migration: pull existing campaign into array
     if (STATE.campaign && STATE.campaign.name) {
       if (!STATE.campaign.id) STATE.campaign.id = Date.now();
@@ -4404,12 +4626,8 @@ function renderCampaign() {
     });
 
     html += '</div>';
-    console.log('[renderCampaign] html length:', html.length, 'first 100:', html.slice(0,100));
     el.innerHTML = html;
-    console.log('[renderCampaign] el.innerHTML length after set:', el.innerHTML.length);
-    console.log('[renderCampaign] el.offsetHeight:', el.offsetHeight, 'el.style.display:', el.style.display);
-    // Force visibility
-    el.style.minHeight = '200px';
+    el.style.cssText = 'min-height:200px;display:block';
 
   } catch(err) {
     el.innerHTML = '<div style="color:var(--fear);padding:20px;font-family:monospace;font-size:0.8rem">Erro ao carregar campanhas: ' + err.message + '</div>';
@@ -4561,7 +4779,6 @@ function clearAll() {
 // SETTINGS
 // ══════════════════════════════════════════════════════════════
 function renderSettings() {
-  const s = STATE.settings;
   document.getElementById('settings-content').innerHTML = `
     <div class="panel">
       <h3>Estilo de Narração do Mestre IA</h3>
@@ -4570,18 +4787,18 @@ function renderSettings() {
       </p>
       <div class="class-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
         ${[
-          {id:'epic',        name:'Épico',        icon:'⚔️',  desc:'Heróico, grandioso, lendário'},
-          {id:'gritty',      name:'Sombrio',       icon:'🌑',  desc:'Realista, brutal, adulto'},
-          {id:'darkfantasy', name:'Dark Fantasy',  icon:'🩸',  desc:'Corrupção, sacrifício, custo moral'},
-          {id:'horror',      name:'Horror',        icon:'💀',  desc:'Medo, ominoso, horror cósmico'},
-          {id:'whimsy',      name:'Lúdico',        icon:'🌟',  desc:'Humor, surpresas, excêntrico'},
-          {id:'swashbuckler',name:'Swashbuckler',  icon:'🎭',  desc:'Duelos, romance, estilo'},
-          {id:'pirate',      name:'Pirata',        icon:'🏴‍☠️', desc:'Mares, navios, tesouros'},
-          {id:'space',       name:'Espacial',      icon:'🚀',  desc:'Naves, planetas, sci-fi'},
-          {id:'lowfantasy',  name:'Low Fantasy',   icon:'🏕️',  desc:'Magia rara, mundo crível'},
-          {id:'political',   name:'Político',      icon:'👑',  desc:'Intrigas, poder, traições'},
-          {id:'mystery',     name:'Mistério',      icon:'🔍',  desc:'Pistas, segredos, revelações'},
-          {id:'cosmic',      name:'Cósmico',       icon:'🌌',  desc:'Deuses, planos, escala épica'},
+          {id:'epic',        name:'Épico',        icon:'⚔◆',  desc:'Heróico, grandioso, lendário'},
+          {id:'gritty',      name:'Sombrio',       icon:'◉',  desc:'Realista, brutal, adulto'},
+          {id:'darkfantasy', name:'Dark Fantasy',  icon:'◆',  desc:'Corrupção, sacrifício, custo moral'},
+          {id:'horror',      name:'Horror',        icon:'†',  desc:'Medo, ominoso, horror cósmico'},
+          {id:'whimsy',      name:'Lúdico',        icon:'★',  desc:'Humor, surpresas, excêntrico'},
+          {id:'swashbuckler',name:'Swashbuckler',  icon:'◉',  desc:'Duelos, romance, estilo'},
+          {id:'pirate',      name:'Pirata',        icon:'◈‍☠◆', desc:'Mares, navios, tesouros'},
+          {id:'space',       name:'Espacial',      icon:'✦',  desc:'Naves, planetas, sci-fi'},
+          {id:'lowfantasy',  name:'Low Fantasy',   icon:'◈◆',  desc:'Magia rara, mundo crível'},
+          {id:'political',   name:'Político',      icon:'◆',  desc:'Intrigas, poder, traições'},
+          {id:'mystery',     name:'Mistério',      icon:'◇',  desc:'Pistas, segredos, revelações'},
+          {id:'cosmic',      name:'Cósmico',       icon:'◎',  desc:'Deuses, planos, escala épica'},
         ].map(style => `
           <div class="class-card ${s.gmStyle===style.id?'selected':''}" onclick="setSetting('gmStyle','${style.id}')">
             <div class="class-icon">${style.icon}</div>
@@ -4614,11 +4831,11 @@ function renderSettings() {
     </div>
 
     <div class="panel">
-      <h3>🔧 Diagnóstico da API</h3>
+      <h3>⚙ Diagnóstico da API</h3>
       <p class="text-sm italic mb-12" style="color:var(--text-secondary)">
         Clique para testar sua chave e ver a resposta exata da API.
       </p>
-      <button class="btn btn-primary" onclick="testAPIRaw()">🔍 Testar API agora</button>
+      <button class="btn btn-primary" onclick="testAPIRaw()">◇ Testar API agora</button>
       <div id="api-test-result" style="margin-top:12px;font-family:monospace;font-size:0.72rem;color:var(--text-secondary);background:var(--bg-void);padding:10px;border-radius:var(--radius);border:1px solid var(--border);display:none;word-break:break-all;white-space:pre-wrap;max-height:300px;overflow-y:auto"></div>
     </div>
 
@@ -4651,7 +4868,7 @@ function renderSettings() {
           placeholder="sk-ant-..." onchange="saveApiKey(this.value);document.getElementById('api-key-input').value=this.value">
       </div>
       <div class="highlight-box">
-        🔒 Sua chave nunca é enviada a nenhum servidor próprio — vai diretamente à API da Anthropic.
+        ● Sua chave nunca é enviada a nenhum servidor próprio — vai diretamente à API da Anthropic.
         Use em redes confiáveis. Não compartilhe este arquivo se ele contiver a chave.
       </div>
     </div>
@@ -4676,7 +4893,7 @@ function renderSettings() {
             <tbody id="pregnancy-table-body"></tbody>
           </table>
         </div>
-        <button class="btn btn-sm mt-12" onclick="rollPregnancyTable()">🎲 Rolar (1d20)</button>
+        <button class="btn btn-sm mt-12" onclick="rollPregnancyTable()">◇ Rolar (1d20)</button>
         <div id="pregnancy-roll-result" style="margin-top:10px"></div>
       </div>
     </div>
@@ -4741,9 +4958,9 @@ async function testAPIRaw() {
       const raw = await res.text();
       el.textContent += '\nHTTP ' + res.status + ': ' + raw.substring(0, 200);
       if (res.ok) {
-        el.textContent += '\n\n✅ MODELO FUNCIONANDO: ' + model;
+        el.textContent += '\n\n● MODELO FUNCIONANDO: ' + model;
         await setSetting('apiModel', model);
-        notify('✅ Modelo encontrado: ' + model, 'ok');
+        notify('● Modelo encontrado: ' + model, 'ok');
         break;
       }
     } catch(e) {
@@ -4756,44 +4973,40 @@ function toggleContentFlag(key) {
   saveState();
   renderSettings();
   const labels = { allowGore:'Gore', allowNudity:'Nudez', allowSex:'Conteúdo Sexual' };
-  notify((STATE.settings[key] ? '🔓 ' : '🔒 ') + labels[key] + (STATE.settings[key] ? ' ativado' : ' desativado'));
-}
+  notify((STATE.settings[key] ? '○ ' : '● ') + labels[key] + (STATE.settings[key] ? ' ativado' : ' desativado'));
 
+}
 function renderContentFlags() {
   const s = STATE.settings;
-  const flags = [
-    {key:'allowGore',   icon:'🩸', label:'Gore & Violência Explícita',
-     desc:'Descrições detalhadas de ferimentos, mutilações e horror visceral.'},
-    {key:'allowNudity', icon:'🔞', label:'Nudez',
-     desc:'Nudez em cenas e descrições (não necessariamente sexual).'},
-    {key:'allowSex',    icon:'🔥', label:'Conteúdo Sexual Explícito',
-     desc:'Cenas íntimas explícitas entre personagens adultos consententes.'},
-  ];
   const el = document.getElementById('content-flags-list');
   if (!el) return;
-  el.innerHTML = flags.map(f => `
-    <div style="background:var(--bg-panel);border:1px solid ${s[f.key]?'var(--fear)':'var(--border)'};
-      border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;transition:border-color 0.3s">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:1.2rem">${f.icon}</span>
-          <span style="font-family:var(--font-display);font-size:0.82rem;color:${s[f.key]?'var(--fear)':'var(--text-primary)'}">${f.label}</span>
-        </div>
-        <button onclick="toggleContentFlag('${f.key}')"
-          style="font-family:var(--font-display);font-size:0.7rem;padding:5px 16px;border-radius:20px;
-          cursor:pointer;transition:all 0.2s;border:1px solid;
-          background:${s[f.key]?'#2a0a12':'var(--bg-card)'};
-          border-color:${s[f.key]?'var(--fear)':'var(--border-bright)'};
-          color:${s[f.key]?'var(--fear)':'var(--text-dim)'}">
-          ${s[f.key]?'● Ativado':'○ Desativado'}
-        </button>
-      </div>
-      <div style="font-size:0.75rem;color:var(--text-dim)">${f.desc}</div>
-    </div>
-  `).join('');
+  el.innerHTML = '';
 
-  // Show/hide pregnancy table
-  // Pregnancy table hidden — handled implicitly by GM
+  const flags = [
+    {key:'allowGore',   label:'Gore & Violencia Explicita',
+     desc:'Descricoes detalhadas de ferimentos e horror visceral.'},
+    {key:'allowNudity', label:'Nudez',
+     desc:'Nudez em cenas e descricoes.'},
+    {key:'allowSex',    label:'Conteudo Sexual Explicito',
+     desc:'Cenas intimas explicitas entre adultos consententes.'},
+  ];
+
+  flags.forEach(function(f) {
+    const active = s[f.key];
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--bg-panel);border:1px solid ' + (active?'var(--fear)':'var(--border)') + ';border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;';
+    div.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">'
+      + '<span style="font-family:var(--font-display);font-size:0.82rem;color:' + (active?'var(--fear)':'var(--text-primary)') + '">' + f.label + '</span>'
+      + '</div>'
+      + '<div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:10px">' + f.desc + '</div>';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm';
+    btn.style.cssText = 'border-color:' + (active?'var(--fear)':'var(--border-bright)') + ';color:' + (active?'var(--fear)':'var(--text-dim)') + ';background:' + (active?'#2a0a12':'transparent');
+    btn.textContent = active ? '● Ativado' : '○ Desativado';
+    btn.onclick = function() { toggleContentFlag(f.key); };
+    div.appendChild(btn);
+    el.appendChild(div);
+  });
 }
 
 function renderPregnancyTable() {
@@ -5461,7 +5674,7 @@ Seja conservador: delta 0 se incerto. Só inclua NPCs realmente impactados.`;
 async function detectAndRegisterNPC(gmText) {
   if (!STATE.apiKey) return;
   // Only try if GM text seems to introduce someone new
-  const keywords = ['apresenta','aparece','encontra','surge','chega','conhece','vê','olha para','aproxima'];
+  const keywords = ['apresenta','aparece','encontra','surge','chega','conhece','vê','olha para','aproxima','diz','responde','sorri','fala','grita','sussurra','entra','sai','ataca','defende','oferece'];
   const lower = gmText.toLowerCase();
   if (!keywords.some(k => lower.includes(k))) return;
 
@@ -5514,7 +5727,24 @@ Se não há NPC novo nomeado, responda: {"found": false}`;
           notes: ''
         });
         saveState();
-        notify(`🧑 Novo NPC registrado: ${parsed.name}`, 'ok');
+        // Always refresh relations and npcs tabs
+        if (typeof renderSessionTab === 'function') {
+          renderSessionTab('relations');
+          renderSessionTab('npcs-panel');
+          // Switch to relations tab to show new NPC
+          if (_activeSessionTab === 'relations' || _activeSessionTab === 'npcs-panel') {
+            renderSessionTab(_activeSessionTab);
+          } else {
+            // Pulse the relations tab button
+            const relBtn = document.getElementById('stab-relations');
+            if (relBtn) {
+              relBtn.style.borderColor = 'var(--gold)';
+              relBtn.style.color = 'var(--gold)';
+              setTimeout(() => { relBtn.style.borderColor=''; relBtn.style.color=''; }, 3000);
+            }
+          }
+        }
+        notify('Novo NPC: ' + parsed.name + ' — veja aba Relações', 'ok');
       }
     }
   } catch(e) { /* silent */ }
