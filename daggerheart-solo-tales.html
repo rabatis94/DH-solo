@@ -199,7 +199,7 @@ body{
   animation:fadeIn .35s ease;
 }
 .view.active{display:flex;flex-direction:column}
-#view-session.active{height:100vh;max-height:100vh}
+#view-session.active{height:100%;overflow:hidden;padding:0}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 .view-header{
@@ -626,60 +626,65 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
   flex-direction:column;
   flex:1;
   min-height:0;
-  height:calc(100vh - 80px);
+  height:100%;
   position:relative;
+  overflow:hidden;
 }
 .chat-topbar{
   display:flex;align-items:center;justify-content:space-between;
   padding:10px 20px;
   border-bottom:1px solid var(--line);
-  background:linear-gradient(180deg, rgba(38,28,22,0.6), rgba(21,16,11,0.4));
+  background:linear-gradient(180deg, rgba(38,28,22,0.8), rgba(21,16,11,0.6));
   flex-shrink:0;
-  gap:12px;
-  flex-wrap:wrap;
+  gap:8px;
+  min-height:48px;
 }
-.chat-topbar-left{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
-.chat-topbar-title{font-family:var(--font-display);color:var(--gold-bright);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-topbar-meta{font-family:var(--font-heading);font-size:0.65rem;letter-spacing:0.18em;color:var(--ink-mute);text-transform:uppercase}
-.chat-topbar-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+@media(max-width:700px){
+  .chat-topbar{padding:10px 12px 10px 60px}
+}
+.chat-topbar-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;overflow:hidden}
+.chat-topbar-title{font-family:var(--font-display);color:var(--gold-bright);font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-topbar-meta{font-family:var(--font-heading);font-size:0.6rem;letter-spacing:0.15em;color:var(--ink-mute);text-transform:uppercase}
+.chat-topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 
 .stat-pill{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:4px 10px;
+  display:inline-flex;align-items:center;gap:3px;
+  padding:3px 8px;
   background:var(--bg-2);
   border:1px solid var(--line);
-  border-radius:20px;
+  border-radius:14px;
   font-family:var(--font-heading);
-  font-size:0.72rem;
-  letter-spacing:0.1em;
+  font-size:0.62rem;
+  letter-spacing:0.08em;
   text-transform:uppercase;
   color:var(--ink-dim);
   white-space:nowrap;
 }
-.stat-pill strong{font-family:var(--font-display);font-size:0.85rem}
+.stat-pill strong{font-family:var(--font-display);font-size:0.78rem}
 .stat-pill.hp strong{color:var(--blood-bright)}
 .stat-pill.stress strong{color:var(--gold-bright)}
 .stat-pill.hope strong{color:var(--hope-bright)}
-.stat-pill.ev strong{color:var(--ink)}
 
 .chat-messages{
   flex:1;
   overflow-y:auto;
-  padding:20px 24px;
+  padding:16px 20px;
   font-family:var(--font-narrative);
-  font-size:1.08rem;
+  font-size:1.06rem;
   line-height:1.7;
   min-height:0;
+  -webkit-overflow-scrolling:touch;
 }
-@media(max-width:700px){.chat-messages{padding:14px 14px}}
+@media(max-width:700px){.chat-messages{padding:12px 14px}}
 
 .chat-bottom{
   flex-shrink:0;
   border-top:1px solid var(--line);
-  background:var(--bg-1);
+  background:linear-gradient(180deg, var(--bg-1), var(--bg-0));
+  padding-bottom:env(safe-area-inset-bottom, 0);
 }
-.chat-input-area{padding:12px 20px 8px}
-@media(max-width:700px){.chat-input-area{padding:10px 12px 6px}}
+.chat-input-area{padding:10px 16px 6px}
+@media(max-width:700px){.chat-input-area{padding:8px 10px 4px}}
 .chat-input-row{display:flex;gap:8px;align-items:flex-end}
 .chat-input{
   flex:1;
@@ -714,25 +719,29 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
 
 .chat-toolbar{
   display:flex;
-  gap:2px;
-  padding:4px 20px 10px;
+  gap:4px;
+  padding:2px 16px 8px;
   overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
 }
-@media(max-width:700px){.chat-toolbar{padding:4px 12px 8px}}
+.chat-toolbar::-webkit-scrollbar{display:none}
+@media(max-width:700px){.chat-toolbar{padding:2px 10px 6px}}
 .chat-tool-btn{
-  padding:6px 14px;
+  padding:5px 12px;
   background:none;
   border:1px solid var(--line);
-  border-radius:16px;
+  border-radius:14px;
   color:var(--ink-mute);
   font-family:var(--font-heading);
-  font-size:0.68rem;
-  letter-spacing:0.1em;
+  font-size:0.62rem;
+  letter-spacing:0.08em;
   text-transform:uppercase;
   cursor:pointer;
   transition:all .2s;
   white-space:nowrap;
-  display:inline-flex;align-items:center;gap:5px;
+  display:inline-flex;align-items:center;gap:4px;
+  flex-shrink:0;
 }
 .chat-tool-btn:hover{border-color:var(--gold);color:var(--gold-bright);background:rgba(212,166,72,0.06)}
 .chat-tool-btn.active{border-color:var(--gold);color:var(--gold-bright);background:rgba(212,166,72,0.1)}
@@ -3071,8 +3080,8 @@ Você DEVE responder com um JSON válido. Estrutura:
   "actions": [
     // Array de ações mecânicas. Tipos possíveis:
     // {"type":"roll_request","trait":"Agility","difficulty":13,"context":"Saltar sobre o abismo"}
-    // {"type":"npc_introduce","name":"Garrik","ancestry":"Dwarf","gender":"Masculino","background":"Ferreiro aposentado","appearance":"Baixo, barba grisalha, cicatriz no olho","affinity":10,"romanceable":false}
-    // {"type":"npc_update","name":"Garrik","affinity_change":-20,"alive":true}
+    // {"type":"npc_introduce","name":"???","nickname":"o guarda da ponte","ancestry":"???","gender":"Masculino","sexuality":"hetero","age_range":"adulto","appearance":"Alto, armadura amassada, rosto encoberto pelo elmo","personality":"desconhecido","background":"???","occupation":"guarda","origin":"???","family":"???","affinity":0,"romantic_compatible":false}
+    // {"type":"npc_update","name":"Garrik","fields":{"name":"Garrik","background":"Ex-ferreiro que perdeu a família","personality":"calado, desconfiado mas leal","origin":"Vila de Thornwall","family":"viúvo, tinha uma filha","affinity_change":-20,"alive":true}}
     // {"type":"hp_change","amount":-2,"reason":"Golpe do ogro"}
     // {"type":"stress_change","amount":1,"reason":"Visão aterrorizante"}
     // {"type":"hope_change","amount":1}
@@ -3085,7 +3094,15 @@ Você DEVE responder com um JSON válido. Estrutura:
 
 Se precisar de uma rolagem do jogador, inclua EXATAMENTE UM roll_request nas actions e PARE a narrativa no ponto da tensão (antes do resultado). Não narre o resultado — espere o jogador rolar.
 Se NÃO precisar de rolagem, continue narrando livremente.
-Sempre registre NPCs novos com npc_introduce na primeira menção. Atualize afinidade com npc_update quando interações significativas acontecerem.
+REGRAS DE NPCs (MUITO IMPORTANTE):
+- Registre NPCs novos com npc_introduce NA PRIMEIRA MENÇÃO, mesmo que o PC não saiba o nome ainda.
+- Use "???" para campos que o PC ainda NÃO DESCOBRIU (nome, background, origem, família). O PC só sabe o que viu/ouviu.
+- Use npc_update para REVELAR informações conforme o PC descobre (pergunta o nome, descobre a família, etc).
+- Campos atualizáveis via npc_update.fields: name, ancestry, background, personality, origin, family, occupation, appearance, affinity_change, alive, sexuality, romantic_compatible.
+- SEXUALIDADE: NPCs são "hetero" ou "gay". Apenas esses dois valores.
+- ROMANCE: Deve acontecer NATURALMENTE. Considere: compatibilidade de personalidade, alinhamento moral, sexualidade, histórico de interações, tempo de convivência. Um assassino frio NÃO se apaixona por um clérigo devoto. Romance exige afinidade alta (+60 ou mais), interações genuínas, e compatibilidade real.
+- romantic_compatible é true apenas se fizer sentido narrativo E se a sexualidade for compatível com o PC.
+- PERSONALIDADE: Use traços como: "calado, desconfiado", "extrovertido, generoso", "egoísta, manipulador", "amigável, ingênuo", etc. Atualize conforme o PC descobre mais.
 
 === CAMPAIGN STATE (VERDADE ABSOLUTA) ===
 ${JSON.stringify(buildCampaignState(camp, pc, npcs), null, 1)}
@@ -3132,9 +3149,11 @@ function buildCampaignState(camp, pc, npcs){
       ]
     },
     npcs: npcs.map(n=>({
-      name:n.name, ancestry:n.ancestry, gender:n.gender,
-      background:n.background, appearance:n.appearance,
-      affinity:n.affinity, alive:n.alive, romanceable:n.romanceable
+      name:n.name, nickname:n.nickname, ancestry:n.ancestry, gender:n.gender,
+      sexuality:n.sexuality, age_range:n.age_range, appearance:n.appearance,
+      personality:n.personality, background:n.background, occupation:n.occupation,
+      origin:n.origin, family:n.family,
+      affinity:n.affinity, alive:n.alive, romantic_compatible:n.romantic_compatible
     }))
   };
 }
@@ -3727,6 +3746,71 @@ function updateStatPills(){
       <span class="stat-pill hope">✦ <strong>${pc.hope}</strong></span>
     `;
   }
+}
+
+/* =================== NPC DETAIL MODAL =================== */
+function openNpcDetail(npcId){
+  const n = state.npcs.find(x=>x.id===npcId);
+  if(!n) return;
+  const displayName = n.name !== '???' ? n.name : (n.nickname || 'Desconhecido');
+  const aff = n.affinity||0;
+  const affPct = ((aff+100)/200)*100;
+  const affColor = aff>30?'var(--hope-bright)':aff<-30?'var(--fear-bright)':'var(--gold-bright)';
+  const field = (label, val)=>{
+    const unknown = !val || val === '???';
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line)">
+      <span class="pc-stat-label">${label}</span>
+      <span style="font-family:var(--font-narrative);font-size:0.9rem;color:${unknown?'var(--ink-faded)':'var(--ink-dim)'};font-style:${unknown?'italic':'normal'};text-align:right;max-width:60%">${unknown ? '???' : escapeHtml(val)}</span>
+    </div>`;
+  };
+
+  const body = `
+    <div style="text-align:center;margin-bottom:18px">
+      ${n.alive===false?'<div style="color:var(--fear-bright);font-family:var(--font-heading);font-size:0.8rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:6px">☠ MORTO</div>':''}
+      ${n.romantic_compatible?'<div style="color:var(--blood-bright);font-size:0.8rem;margin-bottom:6px">♥ Compatível romanticamente</div>':''}
+    </div>
+
+    <div class="section-title"><span class="section-title-text">Identidade</span></div>
+    ${field('Nome', n.name)}
+    ${n.nickname ? field('Apelido/Título', n.nickname) : ''}
+    ${field('Ocupação', n.occupation)}
+    ${field('Ancestralidade', n.ancestry)}
+    ${field('Gênero', n.gender)}
+    ${field('Sexualidade', n.sexuality)}
+    ${field('Faixa Etária', n.age_range)}
+
+    <div class="section-title mt-lg"><span class="section-title-text">Personalidade</span></div>
+    ${field('Comportamento', n.personality)}
+    ${n.appearance ? `
+      <div style="padding:8px 0">
+        <span class="pc-stat-label">Aparência</span>
+        <div style="font-family:var(--font-narrative);font-size:0.9rem;color:var(--ink-dim);font-style:italic;margin-top:4px">${escapeHtml(n.appearance)}</div>
+      </div>
+    ` : field('Aparência', '???')}
+
+    <div class="section-title mt-lg"><span class="section-title-text">História</span></div>
+    ${field('Background', n.background)}
+    ${field('Origem', n.origin)}
+    ${field('Família', n.family)}
+
+    <div class="section-title mt-lg"><span class="section-title-text">Afinidade com ${state.characters.find(x=>x.id===(state.campaigns.find(c=>c.id===state.activeCampaignId)||{}).pcId)?.name || 'o PC'}</span></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <span style="font-size:0.7rem;color:var(--fear-bright)">-100 Ódio</span>
+      <span style="font-family:var(--font-display);font-size:1rem;color:${affColor}">${aff>0?'+':''}${aff}</span>
+      <span style="font-size:0.7rem;color:var(--hope-bright)">+100 Amor</span>
+    </div>
+    <div style="position:relative;height:10px;background:linear-gradient(90deg,var(--fear),var(--ink-faded) 50%,var(--hope));border-radius:5px;overflow:visible">
+      <div style="position:absolute;top:-3px;left:calc(${affPct}% - 8px);width:16px;height:16px;background:var(--gold-bright);border-radius:50%;border:2px solid var(--bg-0);box-shadow:0 0 8px rgba(212,166,72,0.6)"></div>
+    </div>
+    <div style="text-align:center;margin-top:6px;font-size:0.75rem;color:var(--ink-mute)">
+      ${aff<=-60?'Hostil — pode atacar ou trair':aff<=-30?'Desgostoso — evita contato':aff<0?'Desconfiado':aff===0?'Neutro':aff<=30?'Amigável':aff<=60?'Confiante — aliado':aff<=80?'Leal — amigo próximo':'Devoção — laço profundo'}
+    </div>
+  `;
+
+  $('sheetTitle').textContent = displayName;
+  $('sheetSub').textContent = `${n.occupation&&n.occupation!=='???'?n.occupation:'NPC'} · ${n.alive!==false?'Vivo':'Morto'}`;
+  $('sheetBody').innerHTML = body;
+  openModal('modalSheet');
 }
 
 function addManualFact(){
