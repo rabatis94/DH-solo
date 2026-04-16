@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 <title>Daggerheart Solo Tales</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,6 +45,10 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
+/* iOS keyboard: use dvh when available */
+@supports(height:100dvh){
+  html,body{height:100dvh}
+}
 body{
   font-family:var(--font-body);
   background:var(--bg-0);
@@ -64,7 +68,7 @@ body{
 ::-webkit-scrollbar-thumb:hover{background:var(--gold-deep)}
 
 /* =================== APP SHELL =================== */
-.app{display:flex;height:100vh;width:100vw}
+.app{display:flex;height:100vh;height:100dvh;width:100vw}
 
 /* =================== SIDEBAR =================== */
 .sidebar{
@@ -680,7 +684,8 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
   flex-shrink:0;
   border-top:1px solid var(--line);
   background:linear-gradient(180deg, var(--bg-1), var(--bg-0));
-  padding-bottom:env(safe-area-inset-bottom, 0);
+  position:relative;
+  z-index:10;
 }
 .chat-input-area{padding:10px 16px 6px}
 @media(max-width:700px){.chat-input-area{padding:8px 10px 4px}}
@@ -4330,6 +4335,25 @@ document.addEventListener('click', (e)=>{
     }
   }
 });
+
+/* iOS keyboard resize fix — keeps toolbar visible */
+if(window.visualViewport){
+  const vv = window.visualViewport;
+  const onResize = ()=>{
+    const offset = window.innerHeight - vv.height;
+    const app = document.querySelector('.app');
+    if(app){
+      app.style.height = vv.height + 'px';
+    }
+    // Scroll chat to bottom when keyboard opens
+    if(offset > 100){
+      const msgs = $('chatMessages');
+      if(msgs) setTimeout(()=>msgs.scrollTop = msgs.scrollHeight, 50);
+    }
+  };
+  vv.addEventListener('resize', onResize);
+  vv.addEventListener('scroll', onResize);
+}
 
 /* =================== INIT =================== */
 loadState();
