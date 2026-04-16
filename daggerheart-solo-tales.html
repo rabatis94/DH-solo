@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Daggerheart Solo Tales</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,10 +45,6 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
-/* iOS keyboard: use dvh when available */
-@supports(height:100dvh){
-  html,body{height:100dvh}
-}
 body{
   font-family:var(--font-body);
   background:var(--bg-0);
@@ -68,7 +64,7 @@ body{
 ::-webkit-scrollbar-thumb:hover{background:var(--gold-deep)}
 
 /* =================== APP SHELL =================== */
-.app{display:flex;height:100vh;height:100dvh;width:100vw}
+.app{display:flex;height:100%;width:100vw}
 
 /* =================== SIDEBAR =================== */
 .sidebar{
@@ -3943,9 +3939,11 @@ $('chatInput')?.addEventListener('input', function(){
 // Scroll to bottom on focus (mobile keyboard)
 $('chatInput')?.addEventListener('focus', ()=>{
   setTimeout(()=>{
+    const input = $('chatInput');
+    if(input) input.scrollIntoView({block:'nearest', behavior:'smooth'});
     const msgs = $('chatMessages');
     if(msgs) msgs.scrollTop = msgs.scrollHeight;
-  }, 300);
+  }, 350);
 });
 
 function openSessionSettings(){toast('Configurações da campanha — em breve','success')}
@@ -4340,19 +4338,14 @@ document.addEventListener('click', (e)=>{
 if(window.visualViewport){
   const vv = window.visualViewport;
   const onResize = ()=>{
-    const offset = window.innerHeight - vv.height;
-    const app = document.querySelector('.app');
-    if(app){
-      app.style.height = vv.height + 'px';
-    }
     // Scroll chat to bottom when keyboard opens
+    const offset = window.innerHeight - vv.height;
     if(offset > 100){
       const msgs = $('chatMessages');
-      if(msgs) setTimeout(()=>msgs.scrollTop = msgs.scrollHeight, 50);
+      if(msgs) setTimeout(()=>msgs.scrollTop = msgs.scrollHeight, 100);
     }
   };
   vv.addEventListener('resize', onResize);
-  vv.addEventListener('scroll', onResize);
 }
 
 /* =================== INIT =================== */
