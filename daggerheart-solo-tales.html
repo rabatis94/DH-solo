@@ -1110,6 +1110,15 @@ textarea { resize: vertical; min-height: 80px; }
         <div id="sheet-content"></div>
       </div>
 
+      <!-- CAMPAIGN START -->
+      <div class="page" id="page-campstart">
+        <div class="section-header">
+          <h2>✦ Começar em...</h2>
+          <p>Onde começa sua aventura?</p>
+        </div>
+        <div id="campstart-content"></div>
+      </div>
+
       <!-- PLAY SESSION -->
       <div class="page" id="page-play">
         <div class="section-header">
@@ -1354,7 +1363,8 @@ let STATE = {
     name: 'Minha Campanha',
     sessions: [],
     currentSession: null,
-    notes: ''
+    notes: '',
+    startLocation: '',
   },
   settings: {
     gmStyle: 'epic',
@@ -1438,7 +1448,7 @@ function navigate(page) {
     characters: 'Personagens', sheet: 'Ficha',
     play: 'Jogar Sessão', dice: 'Rolagens', combat: 'Combate',
     npcs: 'NPCs', quests: 'Missões', journal: 'Journal',
-    campaign: 'Campanha', settings: 'Configurações',
+    campstart: 'Começar em...', campaign: 'Campanha', settings: 'Configurações',
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
   closeSidebar();
@@ -1448,7 +1458,7 @@ function navigate(page) {
     characters: renderCharacters, sheet: renderSheet,
     play: initPlay, dice: renderDice, combat: renderCombat,
     npcs: renderNPCs, quests: renderQuests, journal: renderJournal,
-    campaign: renderCampaign, settings: renderSettings,
+    campstart: renderCampStart, campaign: renderCampaign, settings: renderSettings,
   };
   if (renders[page]) renders[page]();
   updateQuickStats();
@@ -1568,10 +1578,15 @@ function homeCharacters() {
 function homeCampaign() {
   const hasChar = (STATE.characters && STATE.characters.length > 0) || STATE.character;
   if (!hasChar) {
-    // No character — start new game flow
     STATE.creation = { step: 0, data: {} };
     navigate('create');
     notify('Crie um personagem primeiro para iniciar uma campanha.', 'ok');
+    return;
+  }
+  // If no sessions yet, go through campstart setup
+  const hasSessions = STATE.campaign.currentSession || (STATE.campaign.sessions && STATE.campaign.sessions.length > 0);
+  if (!hasSessions) {
+    navigate('campstart');
     return;
   }
   navigate('play');
@@ -2242,8 +2257,8 @@ function finalizeCharacter() {
   STATE.characters.push(STATE.character);
   STATE.activeCharacterId = STATE.character.id;
   saveState();
-  notify('✨ ' + STATE.character.name + ' criado! (' + STATE.characters.length + ' personagem(ns))', 'ok');
-  navigate('sheet');
+  notify('✦ ' + STATE.character.name + ' criado!', 'ok');
+  navigate('campstart');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2983,6 +2998,10 @@ function buildGMSystem() {
     'Conteúdo sexual: ' + (s.allowSex ? 'SIM — adultos consententes' : 'NÃO — fade to black'),
   ].join(' | ');
 
+  // Campaign start location
+  const startLocation = STATE.campaign.startLocation || '';
+  const startLocationNote = startLocation ? 'Local de início: ' + startLocation : '';
+
   const parts = [
     'Você é o Mestre (GM) de uma campanha solo de Daggerheart. Responda SEMPRE em Português do Brasil. Seja conciso e impactante — máximo 3 parágrafos.',
     '',
@@ -2993,13 +3012,25 @@ function buildGMSystem() {
     '- Empate → CRÍTICO: efeito máximo e excepcional.',
     '- Dano por thresholds: Minor ≤' + (c?.minorThreshold||3) + ' / Major ≤' + (c?.majorThreshold||6) + ' / Severe ≤' + (c?.severeThreshold||9),
     '',
-    'PERSONAGEM: ' + (c?.name||'?') + ' | ' + (c?.className||'?') + ' (' + (c?.subclass||'?') + ') | ' + (c?.ancestryName||'?') + ' de ' + (c?.communityName||'?'),
+    '── PERSONAGEM ──',
+    'Nome: ' + (c?.name||'?') + ' | Pronomes: ' + (c?.pronouns||'?') + ' | Idade: ' + (c?.age||'?'),
+    'Classe: ' + (c?.className||'?') + ' (' + (c?.subclass||'?') + ') | Ancestralidade: ' + (c?.ancestryName||'?') + ' | Comunidade: ' + (c?.communityName||'?'),
     'HP: ' + (c?.hp||0) + '/' + (c?.maxHp||0) + ' | Stress: ' + (c?.stress||0) + '/' + (c?.maxStress||0) + ' | Hope: ' + (c?.hopeTokens||0) + ' | Evasion: ' + (c?.evasion||0) + ' | Armor: ' + (c?.armorScore||0),
     'Atributos: ' + traits,
-    'Experiências: ' + ((c?.experiences||[]).filter(Boolean).join(', ') || 'nenhuma'),
     'Armas: ' + ((c?.weapons||[]).join(', ') || 'nenhuma'),
-    'Motivação: ' + (c?.motivation||'?'),
+    'Experiências: ' + ((c?.experiences||[]).filter(Boolean).join(', ') || 'nenhuma'),
+    '',
+    '── IDENTIDADE E HISTÓRIA ──',
+    'Aparência: ' + (c?.appearance || 'não descrita'),
+    'Background: ' + (c?.background || 'desconhecido'),
+    'Motivação: ' + (c?.motivation || 'desconhecida'),
+    'Cartas de Domínio: ' + ((c?.domainCards||[]).join(', ') || 'nenhuma'),
   ];
+
+  // These are CRUCIAL — use them to shape the narrative voice and world
+  if (c?.appearance) parts.push('NOTA: Use a aparência do personagem em descrições de como NPCs o percebem.');
+  if (c?.background) parts.push('NOTA: O background molda o que o personagem conhece, teme e deseja. Referencie-o nas cenas.');
+  if (c?.motivation) parts.push('NOTA: A motivação deve aparecer nos momentos de tensão e escolha.');
 
   if (npcLines.length) {
     parts.push('');
@@ -3085,9 +3116,18 @@ async function startSessionWithGM() {
   }
 
   const isFirst = STATE.campaign.sessions.length === 0;
+  const startLoc = STATE.campaign.startLocation;
+  const appearance = c?.appearance ? ' Aparência: ' + c.appearance + '.' : '';
+  const background = c?.background ? ' Background: ' + c.background + '.' : '';
+  const motivation = c?.motivation ? ' Motivação: ' + c.motivation + '.' : '';
+
   const prompt = isFirst
-    ? 'Inicie a sessão 1 da campanha "' + STATE.campaign.name + '". Apresente a cena de abertura para ' + c?.name + ', um ' + c?.className + ' ' + c?.ancestryName + '. Estabeleça o mundo, o lugar e o perigo iminente. Termine com uma situação de escolha ou ação.'
-    : 'Inicie a sessão ' + sessionNum + '. Faça uma breve recapitulação dramática dos eventos anteriores e apresente a nova cena para ' + c?.name + '. Termine com uma situação de escolha ou ação.';
+    ? 'Inicie a sessão 1 da campanha "' + STATE.campaign.name + '". '
+      + 'O personagem é ' + c?.name + ', um ' + c?.className + ' ' + c?.ancestryName + '.'
+      + appearance + background + motivation
+      + (startLoc ? ' A cena começa em: ' + startLoc + '. Descreva este local com detalhes sensoriais ricos e apresente uma situação imediata que exige atenção.' : ' Estabeleça o mundo, o local de abertura e um perigo ou situação iminente.')
+      + ' O background e a aparência do personagem devem influenciar como o mundo reage a ele. Termine com uma situação de escolha ou ação clara.'
+    : 'Inicie a sessão ' + sessionNum + '. Faça uma breve recapitulação dramática dos eventos anteriores, depois apresente a nova cena para ' + c?.name + '. Termine com uma situação de escolha ou ação.';
 
   showThinking();
   const text = await callClaude([{ role: 'user', content: prompt }], buildGMSystem());
@@ -3627,6 +3667,120 @@ function clearCombat() { STATE.combat = {enemies:[], round:0, active:false}; sav
 // ══════════════════════════════════════════════════════════════
 // CAMPAIGN
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// CAMPAIGN START — "Começar em..."
+// ══════════════════════════════════════════════════════════════
+const START_LOCATIONS = [
+  { id:'tavern',   icon:'◉', label:'Taverna',         desc:'Uma estalagem barulhenta, cheiros de cerveja e segredos sussurrados.' },
+  { id:'forest',   icon:'◈', label:'Floresta',         desc:'Árvores antigas, sombras profundas e sons desconhecidos.' },
+  { id:'city',     icon:'◆', label:'Cidade',           desc:'Ruas movimentadas, intrigas políticas e oportunidades perigosas.' },
+  { id:'ship',     icon:'◇', label:'Navio',            desc:'O convés balança, o horizonte chama e o mar guarda segredos.' },
+  { id:'dungeon',  icon:'†', label:'Masmorra',         desc:'Pedra fria, escuridão e ecos de algo que respira nas trevas.' },
+  { id:'ruins',    icon:'✦', label:'Ruínas',           desc:'Civilizações esquecidas, magia antiga e perigo a cada passo.' },
+  { id:'castle',   icon:'▣', label:'Castelo',          desc:'Salões majestosos, conspirações nobres e segredos nas paredes.' },
+  { id:'road',     icon:'❧', label:'Estrada',          desc:'Poeira, viajantes, e o desconhecido além da próxima colina.' },
+  { id:'market',   icon:'◈', label:'Mercado',          desc:'Vozes, especiarias, e um encontro que mudará tudo.' },
+  { id:'temple',   icon:'✶', label:'Templo',           desc:'Silêncio sagrado, devotos e um mistério nos altares.' },
+  { id:'port',     icon:'◇', label:'Porto',            desc:'Marinheiros, mercadores e navios rumo ao desconhecido.' },
+  { id:'wilderness',icon:'◉',label:'Ermos',            desc:'Nada além de natureza bruta e a própria sobrevivência.' },
+  { id:'fate',     icon:'✦', label:'O Destino Decide', desc:'Deixe o Mestre escolher onde tudo começa.' },
+  { id:'custom',   icon:'✒', label:'Escrever meu próprio', desc:'Descreva exatamente onde e como começa.' },
+];
+
+function renderCampStart() {
+  const el = document.getElementById('campstart-content');
+  if (!el) return;
+  const current = STATE.campaign.startLocation || '';
+  const c = STATE.character;
+
+  el.innerHTML = `
+    <div class="panel">
+      <h3>Nome da Campanha</h3>
+      <input type="text" id="cs-name" value="${STATE.campaign.name||''}"
+        placeholder="A Maldição de Ironfell..."
+        style="font-family:var(--font-display);font-size:1rem;letter-spacing:0.05em">
+    </div>
+
+    <div class="panel">
+      <h3>Local de Início</h3>
+      <p style="font-family:var(--font-accent);font-style:italic;font-size:0.88rem;color:var(--text-secondary);margin-bottom:16px">
+        Onde ${c?.name||'o herói'} se encontra quando a aventura começa?
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px">
+        ${START_LOCATIONS.filter(l => l.id !== 'custom').map(loc => `
+          <div onclick="selectStartLocation('${loc.id}')"
+            style="background:${current===loc.id?'var(--bg-hover)':'var(--bg-panel)'};
+            border:1px solid ${current===loc.id?'var(--gold)':'var(--border)'};
+            border-radius:var(--radius);padding:14px 12px;cursor:pointer;transition:all 0.2s;text-align:center;"
+            onmouseover="this.style.borderColor='var(--border-bright)'"
+            onmouseout="this.style.borderColor='${current===loc.id?'var(--gold)':'var(--border)'}'">
+            <div style="font-family:var(--font-display);font-size:1.3rem;color:${current===loc.id?'var(--gold)':'var(--text-dim)'};margin-bottom:6px">${loc.icon}</div>
+            <div style="font-family:var(--font-display);font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:${current===loc.id?'var(--gold-pale)':'var(--text-secondary)'};margin-bottom:4px">${loc.label}</div>
+            <div style="font-family:var(--font-accent);font-size:0.72rem;color:var(--text-dim);font-style:italic;line-height:1.4">${loc.desc}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div id="cs-custom-area" style="display:${current==='custom'?'block':'none'}">
+        <div class="form-group">
+          <label>Descreva o local de início</label>
+          <textarea id="cs-custom-text" rows="3"
+            placeholder="Você está sentado numa mesa no canto de uma estalagem à beira do rio, quando..."
+            style="font-family:var(--font-accent);font-style:italic">${STATE.campaign.startLocationCustom||''}</textarea>
+        </div>
+      </div>
+
+      ${current && current !== 'fate' && current !== 'custom' ? `
+        <div style="background:var(--bg-void);border:1px solid var(--border-gold);border-radius:var(--radius);padding:14px 18px;font-family:var(--font-accent);font-style:italic;font-size:0.9rem;color:var(--parchment);line-height:1.7">
+          ${START_LOCATIONS.find(l=>l.id===current)?.desc||''}
+        </div>` : ''}
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px">
+      <button class="btn" onclick="navigate('campaign')">← Voltar</button>
+      <button class="btn btn-hope btn-lg" onclick="beginCampaign()">✦ Iniciar Aventura</button>
+    </div>
+  `;
+}
+
+function selectStartLocation(id) {
+  STATE.campaign.startLocation = id;
+  const customArea = document.getElementById('cs-custom-area');
+  if (customArea) customArea.style.display = id === 'custom' ? 'block' : 'none';
+  saveState();
+  renderCampStart();
+}
+
+async function beginCampaign() {
+  // Save campaign name
+  const nameEl = document.getElementById('cs-name');
+  if (nameEl) STATE.campaign.name = nameEl.value.trim() || 'Minha Campanha';
+
+  // Handle custom location
+  if (STATE.campaign.startLocation === 'custom') {
+    const txt = document.getElementById('cs-custom-text')?.value.trim();
+    STATE.campaign.startLocationCustom = txt;
+    STATE.campaign.startLocation = txt || 'custom';
+  }
+
+  // Handle "fate decides" — ask AI
+  if (STATE.campaign.startLocation === 'fate' && STATE.apiKey) {
+    notify('✦ O destino escolhe...', 'ok');
+    try {
+      const res = await callClaude([{
+        role: 'user',
+        content: 'Para um personagem chamado ' + (STATE.character?.name||'herói') + ', um ' + (STATE.character?.className||'aventureiro') + ' com este background: "' + (STATE.character?.background||'desconhecido') + '", descreva em 1 frase curta onde sua aventura começa. Seja criativo e específico. Apenas a frase, sem introdução.'
+      }], buildGMSystem());
+      STATE.campaign.startLocation = res.trim();
+    } catch(e) {
+      STATE.campaign.startLocation = 'um lugar misterioso determinado pelo destino';
+    }
+  }
+
+  saveState();
+  navigate('play');
+}
+
 function renderCampaign() {
   const sessions = [...STATE.campaign.sessions, STATE.campaign.currentSession].filter(Boolean).reverse();
   const chars = STATE.characters || [];
