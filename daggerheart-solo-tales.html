@@ -4284,101 +4284,136 @@ async function beginCampaign() {
 }
 
 function renderCampaign() {
-  const sessions = [...STATE.campaign.sessions, STATE.campaign.currentSession].filter(Boolean).reverse();
+  const el = document.getElementById('campaign-content');
+  if (!el) return;
+
+  const sessions = [...(STATE.campaign.sessions||[]), STATE.campaign.currentSession].filter(Boolean).reverse();
   const chars = STATE.characters || [];
-  const activeChar = STATE.character;
+  const c = STATE.character;
 
-  document.getElementById('campaign-content').innerHTML = `
-    ${chars.length > 1 ? `
-    <div class="panel" style="margin-bottom:16px">
-      <h3>Personagem Ativo</h3>
-      <div class="flex gap-8 flex-wrap">
-        ${chars.map(ch => `
-          <button onclick="switchCharacter(${ch.id}); renderCampaign();"
-            style="font-family:var(--font-display);font-size:0.68rem;padding:8px 14px;
-            border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.1em;
-            border:1px solid ${ch.id === STATE.activeCharacterId ? 'var(--gold)' : 'var(--border)'};
-            background:${ch.id === STATE.activeCharacterId ? '#1a140a' : 'var(--bg-card)'};
-            color:${ch.id === STATE.activeCharacterId ? 'var(--gold)' : 'var(--text-secondary)'}">
-            ${ch.classIcon||'◆'} ${ch.name}
-          </button>`).join('')}
-      </div>
-    </div>` : ''}
-    <div class="panel-grid-2">
-      <div class="panel" style="margin:0">
-        <h3>Campanha</h3>
-        <div class="form-group">
-          <label>Nome da Campanha</label>
-          <input type="text" id="camp-name" value="${STATE.campaign.name||''}" onchange="STATE.campaign.name=this.value;saveState()">
-        </div>
-        <div class="form-group">
-          <label>Notas da Campanha</label>
-          <textarea id="camp-notes" rows="5" placeholder="Facções, segredos, NPCs importantes..." onchange="STATE.campaign.notes=this.value;saveState()">${STATE.campaign.notes||''}</textarea>
-        </div>
-        <div style="margin-top:12px;font-size:0.8rem;color:var(--text-dim)">
-          ${sessions.length} sessão(ões) · ${STATE.character?.name||'Sem personagem'}
-        </div>
-      </div>
-      <div class="panel" style="margin:0">
-        <h3>Resumo do Personagem</h3>
-        ${STATE.character ? `
-          <div style="font-family:var(--font-display);font-size:1rem;color:var(--gold);margin-bottom:8px">${STATE.character.name}</div>
-          <div style="font-size:0.82rem;color:var(--text-secondary)">
-            ${STATE.character.classIcon} ${STATE.character.className} · Nível ${STATE.character.level}<br>
-            ${STATE.character.ancestryName} · ${STATE.character.communityName}
-          </div>
-          <div class="highlight-box mt-12">
-            <div>HP: ${STATE.character.hp}/${STATE.character.maxHp}</div>
-            <div>✦ Hope: ${STATE.character.hopeTokens} | Stress: ${STATE.character.stress}</div>
-            <div>XP: ${STATE.character.xp||0}</div>
-          </div>
-          <div class="flex gap-8 mt-12">
-            <button class="btn btn-sm" onclick="gainXP()">+ XP</button>
-            <button class="btn btn-sm btn-hope" onclick="levelUp()">↑ Nível</button>
-            <button class="btn btn-sm" onclick="navigate('characters')">◈ Ver Todos</button>
-            <button class="btn btn-sm" onclick="navigate('create')">+ Criar Novo</button>
-          </div>
-        ` : '<p class="text-dim italic">Sem personagem.</p>'}
-      </div>
-    </div>
+  el.innerHTML = '';
+  const frag = document.createDocumentFragment();
 
-    <!-- SESSION HISTORY -->
-    <div class="panel" style="margin-top:16px">
-      <div class="flex align-center justify-between mb-12">
-        <h3 style="margin:0">Histórico de Sessões</h3>
-        <button class="btn btn-sm btn-primary" onclick="navigate('play')">+ Nova Sessão</button>
-      </div>
-      ${sessions.length === 0
-        ? '<p class="text-dim italic" style="text-align:center;padding:20px">Nenhuma sessão ainda. Vá para Jogar Sessão para começar!</p>'
-        : sessions.map(s => `
-          <div class="session-entry" onclick="viewSession(${s.id})">
-            <div class="session-entry-meta">
-              <h4>${s.title||'Sessão'} — ${s.date||''}</h4>
-              <span class="session-badge">${(s.log||[]).length} entradas</span>
-            </div>
-            <p>${(s.log||[]).find(e=>e.type==='gm')?.text?.slice(0,100)||'...'}...</p>
-          </div>
-        `).join('')
-      }
-    </div>
+  function mkBtn(label, cls, onclick) {
+    const b = document.createElement('button');
+    b.className = cls;
+    b.textContent = label;
+    b.onclick = onclick;
+    return b;
+  }
+  function mkDiv(cls, style) {
+    const d = document.createElement('div');
+    if (cls) d.className = cls;
+    if (style) d.style.cssText = style;
+    return d;
+  }
+  function mkEl(tag, props) {
+    const e = document.createElement(tag);
+    if (props) Object.entries(props).forEach(([k,v]) => { if(k==='style') e.style.cssText=v; else if(k==='html') e.innerHTML=v; else if(k==='text') e.textContent=v; else e[k]=v; });
+    return e;
+  }
 
-    <!-- EXPORT / IMPORT -->
-    <div class="panel" style="margin-top:16px">
-      <h3>Salvar / Exportar</h3>
-      <div class="flex gap-8 flex-wrap">
-        <button class="btn btn-sm" onclick="exportData()">↓ Exportar JSON</button>
-        <button class="btn btn-sm" onclick="document.getElementById('import-file').click()">↑ Importar JSON</button>
-        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-        <button class="btn btn-sm btn-danger" onclick="deleteCampaign()">✕ Apagar Campanha</button>
-        <button class="btn btn-sm btn-danger" onclick="if(confirm('Apagar TUDO?'))clearAll()">✕ Resetar Tudo</button>
-      </div>
-      <p class="text-sm italic" style="color:var(--text-dim);margin-top:8px">
-        Todos os dados são salvos automaticamente no navegador (localStorage).
-      </p>
-    </div>
-  `;
+  // Character switcher
+  if (chars.length > 1) {
+    const sw = mkDiv('panel', 'margin-bottom:16px');
+    sw.innerHTML = '<h3>Personagem Ativo</h3>';
+    const row = mkDiv('flex gap-8 flex-wrap');
+    chars.forEach(ch => {
+      const isActive = ch.id === STATE.activeCharacterId;
+      const btn = document.createElement('button');
+      btn.style.cssText = 'font-family:var(--font-display);font-size:0.68rem;padding:8px 14px;border-radius:var(--radius);cursor:pointer;transition:all 0.2s;letter-spacing:0.1em;border:1px solid ' + (isActive?'var(--gold)':'var(--border)') + ';background:' + (isActive?'#1a140a':'var(--bg-card)') + ';color:' + (isActive?'var(--gold)':'var(--text-secondary)');
+      btn.textContent = (ch.classIcon||'◆') + ' ' + (ch.name||'?');
+      btn.onclick = () => { switchCharacter(ch.id); renderCampaign(); };
+      row.appendChild(btn);
+    });
+    sw.appendChild(row);
+    frag.appendChild(sw);
+  }
+
+  // Grid: campaign info + character summary
+  const grid = mkDiv('panel-grid-2', 'margin-bottom:16px');
+
+  // Campaign panel
+  const campPanel = mkDiv('panel', 'margin:0');
+  campPanel.innerHTML = '<h3>Campanha</h3>' +
+    '<div class="form-group"><label>Nome</label><input type="text" id="camp-name" value="" style="margin-bottom:10px"></div>' +
+    '<div class="form-group"><label>Notas</label><textarea id="camp-notes" rows="4" placeholder="Facções, segredos..."></textarea></div>' +
+    '<div style="font-size:0.78rem;color:var(--text-dim);margin-top:8px">' + sessions.length + ' sessão(ões)</div>';
+  campPanel.querySelector('#camp-name').value = (STATE.campaign.name||'');
+  campPanel.querySelector('#camp-name').onchange = function() { STATE.campaign.name=this.value; saveState(); };
+  campPanel.querySelector('#camp-notes').value = (STATE.campaign.notes||'');
+  campPanel.querySelector('#camp-notes').onchange = function() { STATE.campaign.notes=this.value; saveState(); };
+  grid.appendChild(campPanel);
+
+  // Character summary panel
+  const charPanel = mkDiv('panel', 'margin:0');
+  if (c) {
+    const hpPct = Math.max(0,(c.hp/c.maxHp)*100);
+    const hpColor = hpPct>60?'var(--success)':hpPct>30?'var(--warn)':'var(--danger)';
+    charPanel.innerHTML = '<h3>Personagem</h3>' +
+      '<div style="font-family:var(--font-display);font-size:1rem;color:var(--gold-pale);margin-bottom:5px">' + (c.name||'') + '</div>' +
+      '<div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:12px">' + (c.classIcon||'') + ' ' + (c.className||'') + ' · Nível ' + (c.level||1) + '</div>' +
+      '<div class="highlight-box"><div>HP: <strong style="color:' + hpColor + '">' + c.hp + '/' + c.maxHp + '</strong></div>' +
+      '<div>Hope: <strong style="color:var(--gold)">' + (c.hopeTokens||0) + '</strong> &nbsp; Stress: <strong style="color:var(--warn)">' + (c.stress||0) + '</strong></div>' +
+      '<div style="margin-top:3px">XP: ' + (c.xp||0) + '</div></div>';
+    const btnRow = mkDiv('flex gap-8 mt-12 flex-wrap');
+    [
+      ['+XP','btn btn-sm', ()=>gainXP()],
+      ['↑ Nível','btn btn-sm btn-hope', ()=>levelUp()],
+      ['◈ Ver Todos','btn btn-sm', ()=>navigate('characters')],
+      ['+ Criar Novo','btn btn-sm', ()=>navigate('create')],
+    ].forEach(([label,cls,fn]) => btnRow.appendChild(mkBtn(label,cls,fn)));
+    charPanel.appendChild(btnRow);
+  } else {
+    charPanel.innerHTML = '<h3>Personagem</h3><p class="text-dim italic">Sem personagem.</p>';
+    charPanel.appendChild(mkBtn('✶ Criar Personagem','btn btn-primary', ()=>navigate('create')));
+  }
+  grid.appendChild(charPanel);
+  frag.appendChild(grid);
+
+  // Session history
+  const histPanel = mkDiv('panel', 'margin-bottom:16px');
+  const histHead = mkDiv('flex align-center justify-between mb-12');
+  histHead.innerHTML = '<h3 style="margin:0">Histórico de Sessões</h3>';
+  const newSessBtn = mkBtn('+ Nova Sessão','btn btn-sm btn-primary', ()=>navigate('play'));
+  histHead.appendChild(newSessBtn);
+  histPanel.appendChild(histHead);
+
+  if (sessions.length === 0) {
+    histPanel.innerHTML += '<p class="text-dim italic" style="text-align:center;padding:20px">Nenhuma sessão ainda.</p>';
+  } else {
+    sessions.forEach(s => {
+      const entry = mkDiv('session-entry');
+      const preview = (s.log||[]).find(e=>e.type==='gm')?.text?.slice(0,100)||'...';
+      entry.innerHTML = '<div class="session-entry-meta"><h4>' + (s.title||'Sessão') + ' — ' + (s.date||'') + '</h4><span class="session-badge">' + (s.log||[]).length + ' entradas</span></div><p>' + preview + '...</p>';
+      entry.onclick = () => viewSession(s.id);
+      histPanel.appendChild(entry);
+    });
+  }
+  frag.appendChild(histPanel);
+
+  // Export panel
+  const expPanel = mkDiv('panel');
+  expPanel.innerHTML = '<h3>Salvar / Exportar</h3>';
+  const expRow = mkDiv('flex gap-8 flex-wrap');
+  expRow.appendChild(mkBtn('↓ Exportar JSON','btn btn-sm', ()=>exportData()));
+  const impBtn = mkBtn('↑ Importar JSON','btn btn-sm', ()=>document.getElementById('import-file-c').click());
+  expRow.appendChild(impBtn);
+  const impInput = document.createElement('input');
+  impInput.type='file'; impInput.id='import-file-c'; impInput.accept='.json'; impInput.style.display='none';
+  impInput.onchange = importData;
+  expRow.appendChild(impInput);
+  expRow.appendChild(mkBtn('✕ Apagar Campanha','btn btn-sm btn-danger', ()=>deleteCampaign()));
+  expRow.appendChild(mkBtn('✕ Resetar Tudo','btn btn-sm btn-danger', ()=>{ if(confirm('Apagar TUDO?')) clearAll(); }));
+  expPanel.appendChild(expRow);
+  const note = document.createElement('p');
+  note.style.cssText='font-size:0.8rem;font-style:italic;color:var(--text-dim);margin-top:8px';
+  note.textContent='Dados salvos automaticamente no navegador.';
+  expPanel.appendChild(note);
+  frag.appendChild(expPanel);
+
+  el.appendChild(frag);
 }
-
 function gainXP() { if(STATE.character){STATE.character.xp=(STATE.character.xp||0)+1;saveState();renderCampaign();notify('XP ganho!');} }
 function levelUp() {
   if (!STATE.character) return;
