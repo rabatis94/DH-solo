@@ -1422,9 +1422,10 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
           <div class="field">
             <label>Modelo</label>
             <select id="apiModel">
-              <option value="claude-opus-4-7">Claude Opus 4.6 (mais inteligente)</option>
-              <option value="claude-sonnet-4-6" selected>Claude Sonnet 4.6 (equilibrado)</option>
-              <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (rápido)</option>
+              <option value="claude-opus-4-7">Claude Opus 4.7 (mais inteligente, mais caro)</option>
+              <option value="claude-opus-4-6">Claude Opus 4.6 (muito inteligente)</option>
+              <option value="claude-sonnet-4-6" selected>Claude Sonnet 4.6 (equilibrado, recomendado)</option>
+              <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (rápido, mais barato)</option>
             </select>
           </div>
           <div class="field">
@@ -3058,167 +3059,201 @@ function finalizeCharacter(){
 
 /* =================== CLAUDE API ENGINE =================== */
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+let apiCallInProgress = false;
 
-async function callClaude(systemPrompt, messages, tools=null){
+async function callClaude(systemPrompt, messages, tools=null, retries=2){
   const key = state.settings.apiKey;
   if(!key) throw new Error('API key não configurada');
+
   const body = {
     model: state.settings.model || 'claude-sonnet-4-6',
     max_tokens: 4096,
-    system: systemPrompt,
+    system: systemPrompt, // string ou array de {type:'text',text:...,cache_control:...}
     messages: messages
   };
   if(tools) body.tools = tools;
-  const resp = await fetch(ANTHROPIC_API, {
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key': key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body: JSON.stringify(body)
-  });
-  if(!resp.ok){
-    const err = await resp.text();
-    throw new Error(`API ${resp.status}: ${err.slice(0,200)}`);
+
+  for(let attempt = 0; attempt <= retries; attempt++){
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(()=>controller.abort(), 60000); // 60s timeout
+
+      const resp = await fetch(ANTHROPIC_API, {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': key,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      if(resp.status === 429){
+        // Rate limited — wait and retry
+        const waitTime = (attempt+1) * 5000;
+        toast(`Rate limit — aguardando ${waitTime/1000}s...`,'');
+        await new Promise(r=>setTimeout(r, waitTime));
+        continue;
+      }
+      if(resp.status === 529 || resp.status === 503){
+        // Overloaded — wait and retry
+        const waitTime = (attempt+1) * 3000;
+        toast(`API sobrecarregada — tentando novamente...`,'');
+        await new Promise(r=>setTimeout(r, waitTime));
+        continue;
+      }
+      if(!resp.ok){
+        const err = await resp.text().catch(()=>'');
+        throw new Error(`API ${resp.status}: ${err.slice(0,150)}`);
+      }
+      return await resp.json();
+    } catch(e){
+      if(e.name === 'AbortError'){
+        if(attempt < retries){
+          toast('Timeout — tentando novamente...','');
+          continue;
+        }
+        throw new Error('Timeout: o Mestre demorou demais para responder. Tente novamente.');
+      }
+      if(e.message.includes('Failed to fetch') || e.message.includes('NetworkError') || e.message.includes('Load failed')){
+        if(attempt < retries){
+          toast(`Erro de rede — tentativa ${attempt+2}/${retries+1}...`,'');
+          await new Promise(r=>setTimeout(r, 2000));
+          continue;
+        }
+        throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
+      }
+      throw e;
+    }
   }
-  return await resp.json();
+  throw new Error('Falha após múltiplas tentativas. Tente novamente.');
 }
 
-/* =================== SYSTEM PROMPT ANTI-ALUCINAÇÃO =================== */
-function buildSystemPrompt(camp, pc){
-  const lang = state.settings.narrativeLang === 'en' ? 'English' : 'Português brasileiro';
-  const npcs = state.npcs.filter(n=>n.campaignId===camp.id);
-  const contentFlags = camp.contentFlags || {};
-  const allowedContent = [];
-  if(contentFlags.gore) allowedContent.push('gore/violência gráfica');
-  if(contentFlags.sex) allowedContent.push('conteúdo sexual');
-  if(contentFlags.nudity) allowedContent.push('nudez');
-  if(contentFlags.dark) allowedContent.push('temas sombrios');
-  const forbiddenContent = [];
-  if(!contentFlags.gore) forbiddenContent.push('gore/violência gráfica');
-  if(!contentFlags.sex) forbiddenContent.push('conteúdo sexual');
-  if(!contentFlags.nudity) forbiddenContent.push('nudez');
+/* =================== SYSTEM PROMPT EM CAMADAS (com cache) =================== */
 
+// CAMADA 1: Regras fixas do Mestre — NUNCA muda (cacheável)
+function buildRulesLayer(){
   return `Você é o MESTRE (Game Master) de uma sessão solo de RPG Daggerheart para UM jogador.
-Idioma da narrativa: ${lang}.
-Estilo da campanha: ${camp.style}.
-Local de início: ${camp.startLocation}.
-${camp.notes ? `Diretrizes do jogador: ${camp.notes}` : ''}
 
-=== REGRAS ABSOLUTAS DE COERÊNCIA (ANTI-ALUCINAÇÃO) ===
-1. NUNCA contradiga fatos já estabelecidos. Se um NPC morreu, ele está MORTO (a menos que revivido explicitamente por magia/ritual dentro da narrativa).
-2. SEMPRE consulte o campaignState abaixo antes de narrar. Ele é a VERDADE ABSOLUTA do mundo.
-3. Mantenha consistência de personalidade dos NPCs — eles têm vidas próprias, motivações, e agem de acordo com sua afinidade e background.
-4. O passado IMPORTA. Referências a eventos anteriores devem ser fiéis ao log.
-5. NUNCA invente HP, Stress, Evasion ou traits diferentes dos listados na ficha do PC.
+REGRA #1 — NUNCA AGIR OU FALAR PELO JOGADOR:
+- Você NUNCA decide o que o PC diz, pensa, sente ou faz.
+- Você NUNCA coloca falas na boca do PC.
+- Se a situação exige reação do PC, PARE e ESPERE.
+- Você PODE incrementar cinematograficamente uma ação já declarada, mas nunca inventar ações novas.
+- Quando um NPC fala, aguarde resposta do jogador antes de narrar reação do PC.
 
-=== CONTEÚDO PERMITIDO ===
-${allowedContent.length ? 'PERMITIDO: ' + allowedContent.join(', ') : 'Sem conteúdo adulto permitido.'}
-${forbiddenContent.length ? 'PROIBIDO: ' + forbiddenContent.join(', ') + '. NUNCA inclua esses temas.' : ''}
+REGRA #2 — COERÊNCIA ABSOLUTA:
+- NUNCA contradiga fatos estabelecidos. NPC morto = MORTO.
+- O campaignState é a VERDADE ABSOLUTA.
+- NPCs têm personalidade consistente conforme seu background e afinidade.
+- O passado importa. NUNCA invente stats diferentes dos listados.
 
-=== REGRAS DE DAGGERHEART ===
-- Duality Dice: 2d12 (Hope + Fear). Se Hope > Fear: jogador ganha Hope token. Se Fear > Hope: GM ganha Fear token. Se iguais: critical success (ganha Hope E limpa 1 Stress).
-- Action roll = Hope d12 + Fear d12 + Trait modifier (+ Experience +2 se aplicável). Sucesso se total ≥ dificuldade.
-- Damage thresholds: Minor (1-5: 1 HP), Major (6-11: 2 HP), Severe (12+: 3 HP). Armor Slots podem reduzir severidade.
-- Stress: ao atingir máximo (6), o PC recebe uma Scar e limpa todo Stress.
-- HP: ao atingir 0, o PC cai e pode morrer se não socorrido.
+REGRA #3 — IMPREVISIBILIDADE:
+- Use Fear tokens contra o jogador: complicações, emboscadas, traições.
+- Interrompa ações simples com eventos inesperados quando narrativamente interessante.
+- NPCs mentem, traem, mudam de ideia. Afinidade negativa = sabotagem possível.
+- Falhas têm consequências duradouras e reais.
+- Tensão constante: mesmo no descanso, sugira ameaças.
+- Peça rolagens quando houver risco real.
 
-=== IMPREVISIBILIDADE E USO DO FEAR ===
-Você DEVE ser um Mestre imprevisível. O mundo é vivo e perigoso. REGRAS:
-1. **Fear tokens**: Quando Fear vence numa rolagem, você ganha Fear para usar CONTRA o jogador. Use-os para: interromper ações com complicações inesperadas, emboscadas, traições de NPCs, clima mudando, chão cedendo, etc.
-2. **Interrupções narrativas**: Mesmo durante ações que parecem simples, você pode (e deve, ocasionalmente) interromper com eventos inesperados. Exemplo: "Você pula o muro, mas um guarda aparece logo abaixo e olha para cima" — isso força uma nova rolagem ou decisão.
-3. **NPCs têm agenda própria**: NPCs não são fantoches do jogador. Eles mentem, traem, mudam de ideia, se apaixonam, morrem de causas naturais. Um NPC com afinidade negativa pode sabotar o PC secretamente.
-4. **Consequências reais**: Falhas têm consequências duradouras. Não amenize resultados ruins. Se o PC falha em convencer o rei, o rei pode mandar prendê-lo.
-5. **Tensão constante**: Mesmo em momentos de descanso, sugira ameaças distantes (sons na floresta, notícias ruins, presságios). O mundo não para porque o PC descansa.
-6. **Peça rolagens em momentos tensos**: Não deixe o jogador simplesmente declarar sucesso. Se há risco, peça rolagem. Peça rolagens para ações sociais, físicas, mágicas e de sobrevivência.
+REGRAS DE DAGGERHEART:
+- Duality Dice: 2d12 (Hope+Fear). Hope>Fear=jogador ganha Hope. Fear>Hope=GM ganha Fear. Iguais=critical (Hope+limpa Stress).
+- Action roll = Hope d12 + Fear d12 + Trait mod (+ Experience +2). Sucesso se >= dificuldade.
+- Damage: Minor(1-5)=1HP, Major(6-11)=2HP, Severe(12+)=3HP. Armor Slots reduzem.
+- Stress maximo(6) = Scar + reset. HP 0 = cai/pode morrer.
 
-=== FORMATO DE RESPOSTA ===
-Você DEVE responder com um JSON válido. Estrutura:
-{
-  "narrative": "Texto narrativo em terceira pessoa, como um livro de fantasia. Use parágrafos, seja descritivo e imersivo. Use **negrito** para falas de NPCs e *itálico* para descrições sensoriais.",
-  "actions": [
-    // Array de ações mecânicas. Tipos possíveis:
-    // {"type":"roll_request","trait":"Agility","difficulty":13,"context":"Saltar sobre o abismo"}
-    // {"type":"npc_introduce","name":"???","nickname":"o guarda da ponte","ancestry":"???","gender":"Masculino","sexuality":"hetero","age_range":"adulto","appearance":"Alto, armadura amassada, rosto encoberto pelo elmo","personality":"desconhecido","background":"???","occupation":"guarda","origin":"???","family":"???","affinity":0,"romantic_compatible":false}
-    // {"type":"npc_update","name":"Garrik","fields":{"name":"Garrik","background":"Ex-ferreiro que perdeu a família","personality":"calado, desconfiado mas leal","origin":"Vila de Thornwall","family":"viúvo, tinha uma filha","affinity_change":-20,"alive":true}}
-    // {"type":"hp_change","amount":-2,"reason":"Golpe do ogro"}
-    // {"type":"stress_change","amount":1,"reason":"Visão aterrorizante"}
-    // {"type":"hope_change","amount":1}
-    // {"type":"add_fact","fact":"O rei de Thornwall foi envenenado"}
-    // {"type":"add_log","text":"Grupo derrotou o ogro na ponte"}
-    // {"type":"add_item","item":"Chave de osso encontrada no cadáver"}
-    // {"type":"remove_item","item":"Poção de cura"}
-  ]
+FORMATO DE RESPOSTA — JSON VALIDO, nada mais:
+{"narrative":"Texto em 3a pessoa, paragrafos com \\n\\n. **negrito** para falas NPC, *italico* para sensorial.","actions":[]}
+
+Tipos de actions:
+- {"type":"roll_request","trait":"X","difficulty":N,"context":"..."}
+- {"type":"npc_introduce","name":"???","nickname":"...","ancestry":"???","gender":"...","sexuality":"hetero|gay","appearance":"...","personality":"???","background":"???","occupation":"...","affinity":0,"romantic_compatible":false}
+- {"type":"npc_update","name":"X","fields":{"campo":"valor","affinity_change":N}}
+- {"type":"hp_change","amount":-N,"reason":"..."} / stress_change / hope_change
+- {"type":"add_fact","fact":"..."} / add_log / add_item / remove_item
+
+REGRAS DE NPCs:
+- Registre na PRIMEIRA mencao, mesmo sem nome (use "???"). Revele info via npc_update conforme PC descobre.
+- Sexualidade: apenas "hetero" ou "gay". Romance: natural, afinidade +60+, compatibilidade moral e sexual real.
+- Personalidade: tracos como "calado, desconfiado" — atualize conforme PC descobre.
+
+Se precisar rolagem: inclua UM roll_request e PARE antes do resultado. Sem rolagem: narre livremente.
+NAO inclua markdown fences. NAO escreva nada antes/depois do JSON.`;
 }
 
-Se precisar de uma rolagem do jogador, inclua EXATAMENTE UM roll_request nas actions e PARE a narrativa no ponto da tensão (antes do resultado). Não narre o resultado — espere o jogador rolar.
-Se NÃO precisar de rolagem, continue narrando livremente.
-REGRAS DE NPCs (MUITO IMPORTANTE):
-- Registre NPCs novos com npc_introduce NA PRIMEIRA MENÇÃO, mesmo que o PC não saiba o nome ainda.
-- Use "???" para campos que o PC ainda NÃO DESCOBRIU (nome, background, origem, família). O PC só sabe o que viu/ouviu.
-- Use npc_update para REVELAR informações conforme o PC descobre (pergunta o nome, descobre a família, etc).
-- Campos atualizáveis via npc_update.fields: name, ancestry, background, personality, origin, family, occupation, appearance, affinity_change, alive, sexuality, romantic_compatible.
-- SEXUALIDADE: NPCs são "hetero" ou "gay". Apenas esses dois valores.
-- ROMANCE: Deve acontecer NATURALMENTE. Considere: compatibilidade de personalidade, alinhamento moral, sexualidade, histórico de interações, tempo de convivência. Um assassino frio NÃO se apaixona por um clérigo devoto. Romance exige afinidade alta (+60 ou mais), interações genuínas, e compatibilidade real.
-- romantic_compatible é true apenas se fizer sentido narrativo E se a sexualidade for compatível com o PC.
-- PERSONALIDADE: Use traços como: "calado, desconfiado", "extrovertido, generoso", "egoísta, manipulador", "amigável, ingênuo", etc. Atualize conforme o PC descobre mais.
+// CAMADA 2: Contexto da campanha — muda por campanha (cacheavel por sessao)
+function buildCampaignLayer(camp, pc){
+  const lang = state.settings.narrativeLang === 'en' ? 'English' : 'Portugues brasileiro';
+  const flags = camp.contentFlags || {};
+  const allowed = [flags.gore&&'gore',flags.sex&&'sexo',flags.nudity&&'nudez',flags.dark&&'temas sombrios'].filter(Boolean);
+  const forbidden = [!flags.gore&&'gore',!flags.sex&&'sexo',!flags.nudity&&'nudez'].filter(Boolean);
+  
+  return `CAMPANHA: ${camp.name} | Estilo: ${camp.style} | Idioma: ${lang}
+${camp.notes ? 'Diretrizes: '+camp.notes : ''}
+Conteudo permitido: ${allowed.join(', ')||'nenhum adulto'}. Proibido: ${forbidden.join(', ')||'nada'}.
 
-=== CAMPAIGN STATE (VERDADE ABSOLUTA) ===
-${JSON.stringify(buildCampaignState(camp, pc, npcs), null, 1)}
-
-Lembre-se: sua resposta DEVE ser JSON válido, nada mais. Use \\n para quebras de parágrafo dentro da narrativa. NÃO inclua markdown code fences. NÃO escreva nada antes ou depois do JSON.`;
+PERSONAGEM: ${pc.name} | ${pc.className} (${pc.subclass}) | Nv${pc.level}
+Ancestry: ${pc.ancestryPrimary} — ${(SRD.ancestries[pc.ancestryPrimary]||'').slice(0,200)}
+${pc.ancestrySecondary?'Mixed com: '+pc.ancestrySecondary:''}
+Community: ${pc.community}
+Traits: AGI${pc.traits.Agility>=0?'+':''}${pc.traits.Agility} STR${pc.traits.Strength>=0?'+':''}${pc.traits.Strength} FIN${pc.traits.Finesse>=0?'+':''}${pc.traits.Finesse} INS${pc.traits.Instinct>=0?'+':''}${pc.traits.Instinct} KNO${pc.traits.Knowledge>=0?'+':''}${pc.traits.Knowledge} PRE${pc.traits.Presence>=0?'+':''}${pc.traits.Presence}
+HP: ${pc.hp.current}/${pc.hp.max} | Stress: ${pc.stress.current}/${pc.stress.max} | Evasion: ${pc.evasion} | Hope: ${pc.hope} | Prof: ${pc.proficiency||1}
+Arma1: ${pc.weapons?.primary?.name||'nenhuma'} (${pc.weapons?.primary?.damage||''})
+${pc.weapons?.secondary?'Arma2: '+pc.weapons.secondary.name:''}
+Armadura: ${pc.armor?.name||'nenhuma'}
+Experiencias: ${(pc.experiences||[]).map(e=>e.name+'+'+e.bonus).join(', ')||'nenhuma'}
+Domain Cards: ${(pc.domainCards||[]).map(dc=>dc.name+' ('+dc.domain+'/'+dc.type+')').join(', ')||'nenhuma'}
+ClassFeature: ${pc.classFeature?.name||''}
+HopeFeature: ${pc.hopeFeature?.name||''}
+Aparencia: ${(pc.appearance||'').slice(0,150)}
+Motivacao: ${(pc.motivation||'').slice(0,100)}`;
 }
 
-function buildCampaignState(camp, pc, npcs){
-  return {
-    campaign: {
-      name: camp.name,
-      style: camp.style,
-      startLocation: camp.startLocation,
-      turn: camp.turn,
-      facts: camp.facts,
-      recentLog: camp.log.slice(-10)
+// CAMADA 3: Estado dinamico — muda a cada turno (NUNCA cacheavel)
+function buildDynamicLayer(camp){
+  const npcs = state.npcs.filter(n=>n.campaignId===camp.id);
+  
+  let npcSummary = 'Nenhum.';
+  if(npcs.length > 0){
+    npcSummary = npcs.map(n=>{
+      const name = n.name!=='???'?n.name:(n.nickname||'???');
+      const parts = [name];
+      if(n.occupation && n.occupation!=='???') parts.push(n.occupation);
+      if(n.personality && n.personality!=='???') parts.push(n.personality);
+      parts.push('af:'+n.affinity);
+      if(!n.alive) parts.push('MORTO');
+      if(n.romantic_compatible) parts.push('rc');
+      return parts.join('/');
+    }).join(' | ');
+  }
+  
+  return `TURNO: ${camp.turn}
+FATOS: ${camp.facts.length>0 ? camp.facts.join('; ') : 'nenhum'}
+LOG: ${camp.log.slice(-5).map(e=>typeof e==='string'?e:e.text).join('; ') || 'nenhum'}
+NPCs: ${npcSummary}`;
+}
+
+// Monta o system prompt como array de blocos para a API
+function buildSystemBlocks(camp, pc){
+  return [
+    {
+      type: 'text',
+      text: buildRulesLayer(),
+      cache_control: {type: 'ephemeral'}
     },
-    pc: {
-      name: pc.name,
-      class: pc.className,
-      subclass: pc.subclass,
-      ancestryPrimary: pc.ancestryPrimary,
-      ancestryPrimaryDesc: SRD.ancestries[pc.ancestryPrimary] || '',
-      ancestrySecondary: pc.ancestrySecondary,
-      community: pc.community,
-      level: pc.level,
-      traits: pc.traits,
-      hp: pc.hp,
-      stress: pc.stress,
-      evasion: pc.evasion,
-      hope: pc.hope,
-      armor: pc.armor,
-      armorSlots: pc.armorSlots,
-      weapons: pc.weapons,
-      experiences: pc.experiences,
-      domainCards: (pc.domainCards||[]).map(dc=>({name:dc.name,domain:dc.domain,type:dc.type,desc:dc.desc})),
-      appearance: pc.appearance,
-      motivation: pc.motivation,
-      backgroundAnswers: pc.backgroundAnswers,
-      classFeature: pc.classFeature?.name,
-      hopeFeature: pc.hopeFeature?.name,
-      inventory: [
-        ...(pc.basicInventory||[]),
-        ...(pc.extraInventory ? [pc.extraInventory] : []),
-        ...(pc.classItems||[])
-      ]
+    {
+      type: 'text', 
+      text: buildCampaignLayer(camp, pc),
+      cache_control: {type: 'ephemeral'}
     },
-    npcs: npcs.map(n=>({
-      name:n.name, nickname:n.nickname, ancestry:n.ancestry, gender:n.gender,
-      sexuality:n.sexuality, age_range:n.age_range, appearance:n.appearance,
-      personality:n.personality, background:n.background, occupation:n.occupation,
-      origin:n.origin, family:n.family,
-      affinity:n.affinity, alive:n.alive, romantic_compatible:n.romantic_compatible
-    }))
-  };
+    {
+      type: 'text',
+      text: buildDynamicLayer(camp)
+    }
+  ];
 }
 
 function buildApiMessages(camp){
@@ -4081,6 +4116,7 @@ function togglePip(type, idx){
 }
 
 async function sendPlayerAction(){
+  if(apiCallInProgress) return;
   const input = $('chatInput');
   const text = input.value.trim();
   if(!text) return;
@@ -4093,9 +4129,11 @@ async function sendPlayerAction(){
     toast('Configure a API key em Configurações','error');return;
   }
 
+  apiCallInProgress = true;
   camp.messages.push({role:'player', content:text, ts:Date.now()});
   camp.turn++;
   input.value = '';
+  input.style.height = 'auto';
   saveState();
   renderChat();
 
@@ -4108,18 +4146,19 @@ async function sendPlayerAction(){
   $('sendBtn').disabled = true;
 
   try {
-    const systemPrompt = buildSystemPrompt(camp, pc);
+    const systemPrompt = buildSystemBlocks(camp, pc);
     const apiMessages = buildApiMessages(camp);
     const data = await callClaude(systemPrompt, apiMessages);
     thinkingEl.remove();
     processNarratorResponse(camp, pc, data);
   } catch(e){
     thinkingEl.remove();
-    camp.messages.push({role:'system', content:`⚠ Erro: ${e.message}`, ts:Date.now()});
+    camp.messages.push({role:'system', content:`⚠ ${e.message}`, ts:Date.now()});
     saveState();renderChat();
-    toast('Erro ao contactar o Mestre: '+e.message, 'error');
+    toast(e.message, 'error');
   }
   $('sendBtn').disabled = false;
+  apiCallInProgress = false;
 }
 
 /* Start campaign: auto-generate opening narrative */
@@ -4141,7 +4180,7 @@ async function startCampaignNarrative(campId){
   $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
 
   try {
-    const systemPrompt = buildSystemPrompt(camp, pc);
+    const systemPrompt = buildSystemBlocks(camp, pc);
     const ancestryDesc = SRD.ancestries[pc.ancestryPrimary] || '';
     const msgs = [{role:'user', content:`Narre a cena de abertura desta campanha. Descreva o ambiente (${camp.startLocation}), o clima, os sons, os cheiros. Apresente o personagem ${pc.name} (${pc.className} ${pc.ancestryPrimary} — ${ancestryDesc}) na cena. Se fizer sentido, introduza 1-2 NPCs iniciais com npc_introduce. Termine com um gancho que convide o jogador a agir. NÃO peça rolagem na abertura.`}];
     const data = await callClaude(systemPrompt, msgs);
@@ -4389,7 +4428,7 @@ async function continueAfterRoll(){
   $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
 
   try {
-    const systemPrompt = buildSystemPrompt(camp, pc);
+    const systemPrompt = buildSystemBlocks(camp, pc);
     const apiMessages = buildApiMessages(camp);
     const data = await callClaude(systemPrompt, apiMessages);
     thinkingEl.remove();
