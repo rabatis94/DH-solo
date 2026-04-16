@@ -1182,25 +1182,13 @@ textarea { resize: vertical; min-height: 80px; }
             <textarea id="action-input" rows="2" placeholder="Descreva o que você faz..."></textarea>
           </div>
           <div class="session-input-row" style="flex-wrap:wrap;gap:8px;align-items:flex-end">
-            <div class="form-group" style="margin:0;min-width:140px" id="trait-group">
-              <label>Atributo</label>
-              <select id="action-trait">
-                <option value="none">— Nenhum —</option>
-                <option value="Agility">Agility</option>
-                <option value="Strength">Strength</option>
-                <option value="Finesse">Finesse</option>
-                <option value="Instinct">Instinct</option>
-                <option value="Knowledge">Knowledge</option>
-                <option value="Presence">Presence</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin:0;width:80px" id="diff-group">
-              <label>DC</label>
-              <input type="number" id="action-diff" value="15" min="5" max="25" class="diff-input">
-            </div>
             <button class="btn btn-hope btn-lg" onclick="performAction()">✦ Enviar</button>
             <button class="btn btn-sm" onclick="askGMNarrative()">✶ Narrar</button>
+            <button class="btn btn-sm" onclick="showRollPopup('','','')">◇ Rolar</button>
           </div>
+          <!-- Hidden inputs kept for compatibility -->
+          <input type="hidden" id="action-trait" value="none">
+          <input type="hidden" id="action-diff" value="15">
           <div id="char-selector-bar" style="display:none;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
         </div>
 
@@ -1239,7 +1227,7 @@ textarea { resize: vertical; min-height: 80px; }
         </div>
 
         <!-- IN-SESSION PANELS: tab bar -->
-        id="session-panels" style="margin-top:14px">
+        <div id="session-panels" style="margin-top:14px">
           <div id="session-tab-bar" style="display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:12px">
             <button class="session-tab active" onclick="openSessionTab('bag')"          id="stab-bag"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6h-2a5 5 0 00-10 0H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2zm-7-3a3 3 0 013 3H9a3 3 0 013-3zm7 17H5V8h14v12z"/></svg> Mochila</button>
             <button class="session-tab"         onclick="openSessionTab('abilities')"    id="stab-abilities"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16l-6.2 4.3 2.4-7.4L2 8.4h7.6L12 2z"/></svg> Habilidades</button>
@@ -1588,10 +1576,12 @@ function rollDuality() {
 }
 
 function resolveDuality(hope, fear, modifier, difficulty) {
-  const higher = Math.max(hope, fear);
-  const total = higher + (modifier || 0);
+  // Daggerheart: sum BOTH dice + modifier for total
+  // The higher die determines Hope/Fear narrative outcome
+  const total = hope + fear + (modifier || 0);
   const isCrit = hope === fear;
   const isHope = hope >= fear;
+  const higher = Math.max(hope, fear);
   const success = total >= difficulty;
   return { hope, fear, higher, modifier, total, difficulty, isCrit, isHope, success };
 }
@@ -3283,12 +3273,13 @@ function renderLogEntry(entry) {
     const r = entry.roll;
     const outcomeClass = r.isCrit ? 'crit' : r.success ? 'success' : 'fail';
     const outcomeText = r.isCrit ? '✦ CRÍTICO!' : r.success ? '✔ Sucesso' : '✘ Falha';
+    const modStr2 = r.modifier >= 0 ? '+' + r.modifier : '' + r.modifier;
     div.innerHTML = `<div class="log-roll">
       <div class="log-roll-dice">
         <span class="log-die hope ${r.isHope?'winner':''}">Hope: ${r.hope}</span>
         <span class="log-die fear ${!r.isHope&&!r.isCrit?'winner':''}">Fear: ${r.fear}</span>
       </div>
-      <div class="log-roll-total">Total: ${r.total} vs DC ${r.difficulty} ${r.modifier>=0?'+':' '}${r.modifier}</div>
+      <div class="log-roll-total">${r.hope} + ${r.fear} ${modStr2} = <strong>${r.total}</strong> vs DC ${r.difficulty}</div>
       <span class="log-roll-outcome ${outcomeClass}">${outcomeText}</span>
       ${entry.with ? `<span style="font-size:0.75rem;color:var(--text-dim)">${entry.with}</span>` : ''}
     </div>`;
@@ -3679,7 +3670,7 @@ async function performAction() {
 
     const outcome = rollResult.isCrit ? 'CRÍTICO' : rollResult.success ? 'SUCESSO' : 'FALHA';
     const dieWon = rollResult.isHope && !rollResult.isCrit ? 'Hope' : 'Fear';
-    rollSummary = 'Rolagem: Hope=' + rollResult.hope + ' Fear=' + rollResult.fear + ' Total=' + rollResult.total + ' vs DC ' + difficulty + ' → ' + outcome + ' com ' + dieWon + (rollResult.isHope ? ' (+1 Hope token)' : ' (GM +1 Fear)');
+    rollSummary = 'Rolagem: ' + rollResult.hope + ' + ' + rollResult.fear + (totalMod !== 0 ? (totalMod > 0 ? ' +' + totalMod : ' ' + totalMod) : '') + ' = ' + rollResult.total + ' vs DC ' + difficulty + ' → ' + outcome + ' com ' + dieWon + (rollResult.isHope ? ' (+1 Hope token)' : ' (GM +1 Fear)');
   }
 
   if (!STATE.apiKey) {
@@ -3832,7 +3823,7 @@ function rollDualityUI() {
         <div class="die-face die-hope die-rolling" id="hope-die-anim">${hope}</div>
         <div class="die-label hope">HOPE</div>
       </div>
-      <div style="font-size:1.5rem;color:var(--text-dim)">vs</div>
+      <div style="font-size:1.5rem;color:var(--text-dim)">+</div>
       <div class="die-result">
         <div class="die-face die-fear die-rolling" id="fear-die-anim">${fear}</div>
         <div class="die-label fear">FEAR</div>
@@ -3841,8 +3832,8 @@ function rollDualityUI() {
     <div class="roll-result-banner">
       <div class="roll-with">${traitKey!=='none'?traitKey+' ('+DH.modStr(totalMod)+') ':''}vs DC ${difficulty} · ${dieWon}</div>
       <div class="roll-outcome ${outcomeClass}">${outcomeText}</div>
-      <div style="font-family:var(--font-display);font-size:1.1rem;color:var(--text-primary);margin-top:4px">
-        Total: ${result.total}
+      <div style="font-family:var(--font-display);font-size:0.88rem;color:var(--text-secondary);margin-top:6px">
+        ${hope} + ${fear}${totalMod!==0?(totalMod>0?' +'+totalMod:' '+totalMod):''} = <span style="color:var(--text-primary);font-size:1.2rem;font-weight:700">${result.total}</span> vs DC ${difficulty}
       </div>
       <div class="roll-effect ${effectClass}">${hopeEffect||fearEffect}</div>
     </div>
@@ -4698,9 +4689,7 @@ function renderContentFlags() {
   `).join('');
 
   // Show/hide pregnancy table
-  const preg = document.getElementById('pregnancy-section');
-  if (preg) preg.style.display = (s.allowSex || s.allowNudity) ? 'block' : 'none';
-  if (s.allowSex || s.allowNudity) renderPregnancyTable();
+  // Pregnancy table hidden — handled implicitly by GM
 }
 
 function renderPregnancyTable() {
