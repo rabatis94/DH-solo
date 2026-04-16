@@ -197,9 +197,10 @@ body{
   overflow-y:auto;
   padding:40px 56px;
   animation:fadeIn .35s ease;
+  min-height:0;
 }
 .view.active{display:flex;flex-direction:column}
-#view-session.active{height:100%;overflow:hidden;padding:0}
+#view-session.active{overflow:hidden;padding:0;flex:1;min-height:0}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 .view-header{
@@ -626,8 +627,6 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
   flex-direction:column;
   flex:1;
   min-height:0;
-  height:100%;
-  position:relative;
   overflow:hidden;
 }
 .chat-topbar{
@@ -1089,6 +1088,7 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
   .sidebar.collapsed{transform:translateX(-100%)}
   .toggle-btn{display:none}
   .view{padding:20px 16px;padding-top:60px}
+  #view-session.active{padding:0 !important}
   .view-title{font-size:1.5rem}
   .main{width:100%}
 }
