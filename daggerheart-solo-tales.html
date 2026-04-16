@@ -199,6 +199,7 @@ body{
   animation:fadeIn .35s ease;
 }
 .view.active{display:flex;flex-direction:column}
+#view-session.active{height:100vh;max-height:100vh}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 .view-header{
@@ -412,18 +413,21 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
 }
 .checkbox:hover{border-color:var(--gold)}
 .checkbox input{
+  -webkit-appearance:none;
   appearance:none;
-  width:16px;height:16px;
-  border:1px solid var(--gold);
+  width:18px;height:18px;
+  border:2px solid var(--gold);
   border-radius:3px;
   background:var(--bg-1);
   cursor:pointer;
   position:relative;
+  flex-shrink:0;
+  transition:all .15s;
 }
-.checkbox input:checked{background:var(--gold);border-color:var(--gold-bright)}
+.checkbox input:checked{background:var(--gold);border-color:var(--gold-bright);box-shadow:0 0 8px rgba(212,166,72,0.4)}
 .checkbox input:checked::after{
-  content:'✓';position:absolute;top:-2px;left:2px;
-  color:var(--bg-0);font-weight:700;font-size:0.85rem;
+  content:'✓';position:absolute;top:-1px;left:3px;
+  color:var(--bg-0);font-weight:900;font-size:0.9rem;
 }
 
 .radio-grid{
@@ -616,122 +620,176 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
 }
 .points-counter strong{color:var(--gold-bright);font-size:1.2rem}
 
-/* =================== SESSION CHAT =================== */
+/* =================== SESSION CHAT (Claude-style fullscreen) =================== */
 .session-layout{
-  display:grid;
-  grid-template-columns:1fr 320px;
-  gap:24px;
+  display:flex;
+  flex-direction:column;
   flex:1;
   min-height:0;
   height:calc(100vh - 80px);
+  position:relative;
 }
-.chat-area{
-  display:flex;flex-direction:column;
-  background:linear-gradient(180deg, rgba(21,16,11,0.6), rgba(13,9,7,0.8));
-  border:1px solid var(--line);
-  border-radius:8px;
-  overflow:hidden;
-  min-height:0;
-}
-.chat-header{
-  padding:18px 24px;
+.chat-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;
   border-bottom:1px solid var(--line);
-  background:linear-gradient(180deg, rgba(38,28,22,0.6), transparent);
-  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+  background:linear-gradient(180deg, rgba(38,28,22,0.6), rgba(21,16,11,0.4));
+  flex-shrink:0;
+  gap:12px;
+  flex-wrap:wrap;
 }
-.chat-header-title{font-family:var(--font-display);color:var(--gold-bright);font-size:1.1rem}
-.chat-header-meta{font-family:var(--font-heading);font-size:0.72rem;letter-spacing:0.2em;color:var(--ink-mute);text-transform:uppercase}
+.chat-topbar-left{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
+.chat-topbar-title{font-family:var(--font-display);color:var(--gold-bright);font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-topbar-meta{font-family:var(--font-heading);font-size:0.65rem;letter-spacing:0.18em;color:var(--ink-mute);text-transform:uppercase}
+.chat-topbar-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+
+.stat-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;
+  background:var(--bg-2);
+  border:1px solid var(--line);
+  border-radius:20px;
+  font-family:var(--font-heading);
+  font-size:0.72rem;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--ink-dim);
+  white-space:nowrap;
+}
+.stat-pill strong{font-family:var(--font-display);font-size:0.85rem}
+.stat-pill.hp strong{color:var(--blood-bright)}
+.stat-pill.stress strong{color:var(--gold-bright)}
+.stat-pill.hope strong{color:var(--hope-bright)}
+.stat-pill.ev strong{color:var(--ink)}
 
 .chat-messages{
   flex:1;
   overflow-y:auto;
-  padding:28px 32px;
+  padding:20px 24px;
   font-family:var(--font-narrative);
   font-size:1.08rem;
   line-height:1.7;
+  min-height:0;
 }
-.msg{margin-bottom:24px;animation:fadeIn .4s}
+@media(max-width:700px){.chat-messages{padding:14px 14px}}
+
+.chat-bottom{
+  flex-shrink:0;
+  border-top:1px solid var(--line);
+  background:var(--bg-1);
+}
+.chat-input-area{padding:12px 20px 8px}
+@media(max-width:700px){.chat-input-area{padding:10px 12px 6px}}
+.chat-input-row{display:flex;gap:8px;align-items:flex-end}
+.chat-input{
+  flex:1;
+  min-height:44px;
+  max-height:160px;
+  resize:none;
+  background:var(--bg-2);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:10px 16px;
+  color:var(--ink);
+  font-family:var(--font-narrative);
+  font-size:1rem;
+  font-style:italic;
+  line-height:1.4;
+}
+.chat-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,166,72,0.15)}
+.chat-send-btn{
+  width:44px;height:44px;
+  border-radius:50%;
+  background:var(--gold);
+  border:none;
+  color:var(--bg-0);
+  cursor:pointer;
+  display:grid;place-items:center;
+  flex-shrink:0;
+  transition:all .2s;
+}
+.chat-send-btn:hover{background:var(--gold-bright);transform:scale(1.05)}
+.chat-send-btn:disabled{opacity:0.3;cursor:not-allowed;transform:none}
+.chat-send-btn svg{width:20px;height:20px}
+
+.chat-toolbar{
+  display:flex;
+  gap:2px;
+  padding:4px 20px 10px;
+  overflow-x:auto;
+}
+@media(max-width:700px){.chat-toolbar{padding:4px 12px 8px}}
+.chat-tool-btn{
+  padding:6px 14px;
+  background:none;
+  border:1px solid var(--line);
+  border-radius:16px;
+  color:var(--ink-mute);
+  font-family:var(--font-heading);
+  font-size:0.68rem;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .2s;
+  white-space:nowrap;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.chat-tool-btn:hover{border-color:var(--gold);color:var(--gold-bright);background:rgba(212,166,72,0.06)}
+.chat-tool-btn.active{border-color:var(--gold);color:var(--gold-bright);background:rgba(212,166,72,0.1)}
+
+/* Messages */
+.msg{margin-bottom:20px;animation:fadeIn .4s}
 .msg-narrator{
   color:var(--ink);
-  text-align:left;
   font-style:normal;
-  border-left:2px solid var(--gold-deep);
-  padding:8px 0 8px 22px;
-  margin-left:4px;
+  padding:2px 0;
 }
-.msg-narrator p{margin-bottom:14px}
+.msg-narrator p{margin-bottom:12px}
 .msg-narrator p:last-child{margin-bottom:0}
 .msg-narrator em{color:var(--gold-bright)}
 .msg-narrator strong{color:var(--ember);font-style:italic}
 
 .msg-player{
-  background:linear-gradient(135deg, rgba(139,20,20,0.15), rgba(33,18,14,0.4));
-  border:1px solid rgba(184,56,56,0.3);
-  padding:12px 18px;
-  border-radius:6px;
+  background:linear-gradient(135deg, rgba(139,20,20,0.12), rgba(33,18,14,0.3));
+  border:1px solid rgba(184,56,56,0.25);
+  padding:10px 16px;
+  border-radius:16px;
+  border-bottom-right-radius:4px;
   color:var(--ink-dim);
   font-style:italic;
-  margin-left:40px;
+  margin-left:20%;
+  max-width:80%;
 }
-.msg-player::before{
-  content:'❯ ';color:var(--blood-bright);font-style:normal;font-weight:700;
-}
+@media(max-width:700px){.msg-player{margin-left:10%;max-width:90%}}
 
 .msg-system{
   text-align:center;
   font-family:var(--font-heading);
-  font-size:0.8rem;
+  font-size:0.75rem;
   letter-spacing:0.2em;
   color:var(--ink-mute);
   text-transform:uppercase;
-  padding:10px;
-  border-top:1px dashed var(--line);
-  border-bottom:1px dashed var(--line);
+  padding:8px;
 }
 
 .msg-roll{
   background:var(--bg-2);
   border:1px solid var(--gold-deep);
-  border-radius:6px;
-  padding:14px 18px;
+  border-radius:8px;
+  padding:12px 16px;
   font-family:var(--font-heading);
   text-align:center;
-  margin:0 20px 24px;
+  max-width:320px;
+  margin:0 auto 20px;
 }
-.msg-roll-title{color:var(--gold-bright);font-size:0.85rem;letter-spacing:0.15em;margin-bottom:6px}
-.msg-roll-result{font-family:var(--font-display);font-size:1.4rem;color:var(--ink)}
+.msg-roll-title{color:var(--gold-bright);font-size:0.78rem;letter-spacing:0.15em;margin-bottom:4px}
+.msg-roll-result{font-family:var(--font-display);font-size:1.3rem;color:var(--ink)}
 .msg-roll-result.success{color:var(--hope-bright)}
 .msg-roll-result.fail{color:var(--fear-bright)}
 
-.chat-input-area{
-  padding:18px 24px;
-  border-top:1px solid var(--line);
-  background:var(--bg-1);
-}
-.chat-input-row{display:flex;gap:10px}
-.chat-input{
-  flex:1;
-  min-height:60px;
-  max-height:200px;
-  resize:none;
-  background:var(--bg-2);
-  border:1px solid var(--line);
-  border-radius:4px;
-  padding:12px 14px;
-  color:var(--ink);
-  font-family:var(--font-narrative);
-  font-size:1rem;
-  font-style:italic;
-}
-.chat-input:focus{outline:none;border-color:var(--gold)}
-
-/* PC SIDE PANEL */
+/* PC SIDE PANEL — now used as bottom-sheet / modal */
 .pc-panel{
-  display:flex;flex-direction:column;
-  background:linear-gradient(180deg, rgba(21,16,11,0.6), rgba(13,9,7,0.8));
-  border:1px solid var(--line);
-  border-radius:8px;
-  overflow:hidden;
+  display:none;
 }
 .pc-panel-tabs{
   display:flex;
@@ -1013,7 +1071,6 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
 
 /* =================== RESPONSIVE =================== */
 @media (max-width: 900px){
-  .session-layout{grid-template-columns:1fr;height:auto}
   .pc-panel{max-height:400px}
   .view{padding:24px 20px}
 }
@@ -1200,19 +1257,8 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
     </section>
 
     <!-- SESSION -->
-    <section class="view" id="view-session">
-      <div class="view-header" style="margin-bottom:18px">
-        <div>
-          <h2 class="view-title" id="sessionTitle">Sessão</h2>
-          <div class="view-subtitle" id="sessionSubtitle">Sem campanha ativa</div>
-        </div>
-        <div class="flex gap-sm">
-          <button class="btn btn-sm btn-ghost" onclick="openSessionSettings()">⚙ Campanha</button>
-          <button class="btn btn-sm btn-ghost" onclick="exportCampaign()">⬇ Exportar</button>
-        </div>
-      </div>
-
-      <div id="noSessionState" class="empty-state">
+    <section class="view" id="view-session" style="padding:0;overflow:hidden">
+      <div id="noSessionState" class="empty-state" style="padding-top:80px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <p>Nenhuma campanha ativa.<br>Crie ou selecione uma para começar a jogar.</p>
         <div class="mt-lg flex gap" style="justify-content:center">
@@ -1221,30 +1267,43 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml;u
       </div>
 
       <div id="sessionLayout" class="session-layout hidden">
-        <div class="chat-area">
-          <div class="chat-header">
+        <!-- TOP BAR: campaign name + HP/Stress/Hope pills -->
+        <div class="chat-topbar">
+          <div class="chat-topbar-left">
             <div>
-              <div class="chat-header-title" id="chatCampaignName">—</div>
-              <div class="chat-header-meta" id="chatCampaignMeta">—</div>
+              <div class="chat-topbar-title" id="chatCampaignName">—</div>
+              <div class="chat-topbar-meta" id="chatCampaignMeta">—</div>
             </div>
-            <div class="chat-header-meta" id="chatTurnCounter">Turno 0</div>
           </div>
-          <div class="chat-messages" id="chatMessages"></div>
-          <div class="chat-input-area">
-            <div class="chat-input-row">
-              <textarea class="chat-input" id="chatInput" placeholder="O que você fará? Descreva sua ação, fala ou pensamento..." rows="2"></textarea>
-              <button class="btn btn-primary" id="sendBtn" onclick="sendPlayerAction()">Agir</button>
-            </div>
+          <div class="chat-topbar-right" id="chatStatPills">
+            <!-- filled by JS -->
           </div>
         </div>
 
-        <aside class="pc-panel" id="pcPanel">
-          <div class="pc-panel-tabs" id="pcPanelTabs">
-            <button class="pc-tab active" data-tab="stats" onclick="switchPanelTab('stats')">Ficha</button>
-            <button class="pc-tab" data-tab="npcs" onclick="switchPanelTab('npcs')">NPCs</button>
-            <button class="pc-tab" data-tab="bag" onclick="switchPanelTab('bag')">Mochila</button>
-            <button class="pc-tab" data-tab="journal" onclick="switchPanelTab('journal')">Journal</button>
+        <!-- MESSAGES -->
+        <div class="chat-messages" id="chatMessages"></div>
+
+        <!-- BOTTOM: input + toolbar -->
+        <div class="chat-bottom">
+          <div class="chat-input-area">
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chatInput" placeholder="O que você fará?" rows="1"></textarea>
+              <button class="chat-send-btn" id="sendBtn" onclick="sendPlayerAction()" title="Enviar ação">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+              </button>
+            </div>
           </div>
+          <div class="chat-toolbar" id="chatToolbar">
+            <button class="chat-tool-btn" onclick="openPanelModal('stats')">📋 Ficha</button>
+            <button class="chat-tool-btn" onclick="openPanelModal('npcs')">👥 NPCs</button>
+            <button class="chat-tool-btn" onclick="openPanelModal('bag')">🎒 Mochila</button>
+            <button class="chat-tool-btn" onclick="openPanelModal('journal')">📜 Journal</button>
+            <button class="chat-tool-btn" onclick="rollDualityDiceQuick()">🎲 Rolar</button>
+          </div>
+        </div>
+
+        <!-- Hidden panel data containers (used by modals) -->
+        <aside class="pc-panel" id="pcPanel">
           <div class="pc-tab-content" id="pcTabStats"></div>
           <div class="pc-tab-content hidden" id="pcTabNpcs"></div>
           <div class="pc-tab-content hidden" id="pcTabBag"></div>
@@ -2996,6 +3055,15 @@ ${forbiddenContent.length ? 'PROIBIDO: ' + forbiddenContent.join(', ') + '. NUNC
 - Stress: ao atingir máximo (6), o PC recebe uma Scar e limpa todo Stress.
 - HP: ao atingir 0, o PC cai e pode morrer se não socorrido.
 
+=== IMPREVISIBILIDADE E USO DO FEAR ===
+Você DEVE ser um Mestre imprevisível. O mundo é vivo e perigoso. REGRAS:
+1. **Fear tokens**: Quando Fear vence numa rolagem, você ganha Fear para usar CONTRA o jogador. Use-os para: interromper ações com complicações inesperadas, emboscadas, traições de NPCs, clima mudando, chão cedendo, etc.
+2. **Interrupções narrativas**: Mesmo durante ações que parecem simples, você pode (e deve, ocasionalmente) interromper com eventos inesperados. Exemplo: "Você pula o muro, mas um guarda aparece logo abaixo e olha para cima" — isso força uma nova rolagem ou decisão.
+3. **NPCs têm agenda própria**: NPCs não são fantoches do jogador. Eles mentem, traem, mudam de ideia, se apaixonam, morrem de causas naturais. Um NPC com afinidade negativa pode sabotar o PC secretamente.
+4. **Consequências reais**: Falhas têm consequências duradouras. Não amenize resultados ruins. Se o PC falha em convencer o rei, o rei pode mandar prendê-lo.
+5. **Tensão constante**: Mesmo em momentos de descanso, sugira ameaças distantes (sons na floresta, notícias ruins, presságios). O mundo não para porque o PC descansa.
+6. **Peça rolagens em momentos tensos**: Não deixe o jogador simplesmente declarar sucesso. Se há risco, peça rolagem. Peça rolagens para ações sociais, físicas, mágicas e de sobrevivência.
+
 === FORMATO DE RESPOSTA ===
 Você DEVE responder com um JSON válido. Estrutura:
 {
@@ -3236,6 +3304,7 @@ function processNarratorResponse(camp, pc, data){
   saveState();
   renderChat();
   renderPCPanel(pc);
+  updateStatPills();
 
   // If there's a roll request, open the roll modal
   if(rollRequest){
@@ -3374,19 +3443,23 @@ function renderSession(){
   if(!camp){
     $('noSessionState').classList.remove('hidden');
     $('sessionLayout').classList.add('hidden');
-    $('sessionTitle').textContent = 'Sessão';
-    $('sessionSubtitle').textContent = 'Sem campanha ativa';
     return;
   }
   $('noSessionState').classList.add('hidden');
   $('sessionLayout').classList.remove('hidden');
 
   const pc = state.characters.find(x=>x.id===camp.pcId);
-  $('sessionTitle').textContent = camp.name;
-  $('sessionSubtitle').textContent = `${camp.style} · ${pc?pc.name:'?'}`;
   $('chatCampaignName').textContent = camp.name;
-  $('chatCampaignMeta').textContent = `${camp.style} · começou em ${camp.startLocation}`;
-  $('chatTurnCounter').textContent = `Turno ${camp.turn}`;
+  $('chatCampaignMeta').textContent = `${camp.style}`;
+
+  // Render stat pills in topbar
+  if(pc){
+    $('chatStatPills').innerHTML = `
+      <span class="stat-pill hp">HP <strong>${pc.hp.current}/${pc.hp.max}</strong></span>
+      <span class="stat-pill stress">ST <strong>${pc.stress.current}/${pc.stress.max}</strong></span>
+      <span class="stat-pill hope">✦ <strong>${pc.hope}</strong></span>
+    `;
+  }
 
   renderChat();
   renderPCPanel(pc);
@@ -3613,12 +3686,47 @@ function renderPCPanel(pc){
 }
 
 function switchPanelTab(tab){
-  document.querySelectorAll('.pc-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelector(`.pc-tab[data-tab="${tab}"]`).classList.add('active');
   ['stats','npcs','bag','journal'].forEach(t=>{
     const el = $('pcTab'+t.charAt(0).toUpperCase()+t.slice(1));
     if(el) el.classList.toggle('hidden', t!==tab);
   });
+}
+
+function openPanelModal(tab){
+  // Re-render panel data
+  const camp = state.campaigns.find(c=>c.id===state.activeCampaignId);
+  const pc = camp ? state.characters.find(x=>x.id===camp.pcId) : null;
+  if(pc) renderPCPanel(pc);
+
+  const titles = {stats:'Ficha do Personagem', npcs:'NPCs Conhecidos', bag:'Mochila & Equipamento', journal:'Journal & Fatos'};
+  $('sheetTitle').textContent = titles[tab]||'Painel';
+  $('sheetSub').textContent = pc ? `${pc.name} · ${pc.className}` : '';
+
+  // Copy content from hidden panel tab to modal
+  switchPanelTab(tab);
+  const content = $('pcTab'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  $('sheetBody').innerHTML = content ? content.innerHTML : '';
+
+  openModal('modalSheet');
+}
+
+function rollDualityDiceQuick(){
+  goTo('dice');
+}
+
+function updateStatPills(){
+  const camp = state.campaigns.find(c=>c.id===state.activeCampaignId);
+  if(!camp) return;
+  const pc = state.characters.find(x=>x.id===camp.pcId);
+  if(!pc) return;
+  const pills = $('chatStatPills');
+  if(pills){
+    pills.innerHTML = `
+      <span class="stat-pill hp">HP <strong>${pc.hp.current}/${pc.hp.max}</strong></span>
+      <span class="stat-pill stress">ST <strong>${pc.stress.current}/${pc.stress.max}</strong></span>
+      <span class="stat-pill hope">✦ <strong>${pc.hope}</strong></span>
+    `;
+  }
 }
 
 function addManualFact(){
@@ -3734,9 +3842,21 @@ async function startCampaignNarrative(campId){
 }
 
 $('chatInput')?.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){
+  if(e.key==='Enter' && !e.shiftKey){
     e.preventDefault();sendPlayerAction();
   }
+});
+// Auto-resize textarea
+$('chatInput')?.addEventListener('input', function(){
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+});
+// Scroll to bottom on focus (mobile keyboard)
+$('chatInput')?.addEventListener('focus', ()=>{
+  setTimeout(()=>{
+    const msgs = $('chatMessages');
+    if(msgs) msgs.scrollTop = msgs.scrollHeight;
+  }, 300);
 });
 
 function openSessionSettings(){toast('Configurações da campanha — em breve','success')}
